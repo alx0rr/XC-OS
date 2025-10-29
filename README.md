@@ -1,5 +1,5 @@
 <div align="center">
-<h1>TectonicOS</h1>
+<h1>XS Operating System</h1>
   
 building iso
 </div>
