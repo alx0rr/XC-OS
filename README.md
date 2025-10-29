@@ -1,5 +1,5 @@
 <div align="center">
-<h1>XS Operating System</h1>
+<h1>XC Operating System</h1>
   
 building iso
 </div>
