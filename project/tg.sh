@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "NOT A GIT REPOSITORY"
+  echo "NOT A GIT REPOSITORYкак "
     exit 1
     fi
     cd "$(git rev-parse --show-toplevel)"
