@@ -1,8 +1,13 @@
-Ксарз, давай уйдём из этой помойки ебаной называемой гитхаб, и перейдём на нормальный вариант, ТУТ ТАКАЯ ХУЙНЯ УПРАВЛЕНИЕ Я ПРОСТО ХУЕЮ БЛЯТЬ  
-
 <div align="center">
 <h1>XC Operating System</h1>
-  
+
+XC-OS — Operating System maked by Xsarz(DXsarz) and Cirnik (Cirnik But Dex/shinjiteta/forker-25).
+This Operating System is simple and example project, which contains simple VBE graphics, MMU, Kernel and Bootloader.
+The OS was created for hobby purposes, so it may contain errors, bugs and other shortcomings.
+Please think carefully before installing it on real hardware.
+
+
+
 building iso
 </div>
 
