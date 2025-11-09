@@ -8,9 +8,10 @@ Please think carefully before installing it on real hardware.
 
 
 
-building iso
+building img
 </div>
 
 ```shell
+cd project
 sh build.sh
 ```
