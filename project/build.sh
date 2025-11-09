@@ -55,7 +55,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Compiling Memory Manager..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/memory.c -o $build_dir/memory.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/memory/pmm.c -o $build_dir/pmm.o
 if [ $? -ne 0 ]; then
     echo "Error compiling Memory Manager"
     exit 1
@@ -76,6 +76,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "Compiling cpu driver..."
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/cpu/cpu.c -o $build_dir/cpu.o
+if [ $? -ne 0 ]; then
+    echo "Error compiling Kernel"
+    exit 1
+fi
+
+
 echo "Compiling Kernel..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $kernel_src/kernel.c -o $build_dir/kernel.o
 if [ $? -ne 0 ]; then
@@ -86,8 +94,9 @@ fi
 echo "Linking Kernel..."
 ld -m elf_i386 -T $src_dir/linker.ld -o $build_dir/kernel.bin \
     $build_dir/boot.o $build_dir/kernel.o $build_dir/vbe.o \
-    $build_dir/memory.o $build_dir/framebuffer.o $build_dir/text.o \
-    $build_dir/string.o $build_dir/keyboard.o $build_dir/time.o $build_dir/random.o
+    $build_dir/pmm.o $build_dir/framebuffer.o $build_dir/text.o \
+    $build_dir/string.o $build_dir/keyboard.o $build_dir/time.o $build_dir/random.o \
+    $build_dir/cpu.o
 if [ $? -ne 0 ]; then
     echo "Error linking Kernel"
     exit 1
