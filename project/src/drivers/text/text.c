@@ -60,20 +60,20 @@ void drawchar_at_pos(
     bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color);
 }
 
-
 void putchar(char c) {
     if (c == '\n') {
         xpos = 0;
         ypos += 14;
+        if (ypos + 14 >= fb_get_height()) {
+            fb_fill(bg_color);
+            xpos = 0;
+            ypos = 0;
+        }
     } else if (c == '\r') {
         xpos = 0;
-    } else if (c == '\b') {  // backspace
+    } else if (c == '\b') {
         if (xpos >= 8) {
             xpos -= 8;
-            drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
-        } else if (ypos >= 14) {
-            ypos -= 14;
-            xpos = fb_get_width() - 8;
             drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
         }
     } else {
@@ -82,10 +82,14 @@ void putchar(char c) {
         if (xpos >= fb_get_width()) {
             xpos = 0;
             ypos += 14;
+            if (ypos + 14 >= fb_get_height()) {
+                fb_fill(bg_color);
+                xpos = 0;
+                ypos = 0;
+            }
         }
     }
 }
-
 
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
     while (*str != '\0') {
