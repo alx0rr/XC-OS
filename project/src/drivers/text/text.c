@@ -65,26 +65,24 @@ void scroll() {
     uint32_t w = fb_get_width();
     uint32_t h = fb_get_height();
 
-    for (uint32_t y = 14; y < h; y++) {
+    for (uint32_t y = 0; y < h - 14; y++) {
         for (uint32_t x = 0; x < w; x++) {
-            uint32_t src_y = y;
-            uint32_t dst_y = y - 14;
-            uint32_t color = 0;
-            
             vbe_info_t vbe = get_vbe_struct();
             uint8_t* fb = vbe_get_framebuffer();
+            uint32_t color = 0;
+            
             if (vbe.bpp == 32) {
-                uint32_t* pixel = (uint32_t*)(fb + src_y * vbe.pitch + x * 4);
-                color = *pixel;
+                uint32_t* src_pixel = (uint32_t*)(fb + (y + 14) * vbe.pitch + x * 4);
+                color = *src_pixel;
             }
             
-            fb_putpixel(x, dst_y, color);
+            fb_putpixel(x, y, color);
         }
     }
 
     for (uint32_t y = h - 14; y < h; y++) {
         for (uint32_t x = 0; x < w; x++) {
-            fb_putpixel(x, y, 0);
+            fb_putpixel(x, y, bg_color);
         }
     }
     
