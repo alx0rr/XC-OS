@@ -24,7 +24,6 @@ load_xcos:
     mov si, vbe_init_msg
     call prnt
     
-    ; Вызываем функцию инициализации VBE
     mov cx, 0x4118
     call init_vbe_mode
     
@@ -34,7 +33,6 @@ load_xcos:
     mov si, mmap_init_msg
     call prnt
     
-    ; Вызываем функцию получения карты памяти
     call get_memory_map
     
     cmp eax, 0
