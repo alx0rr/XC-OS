@@ -2,7 +2,6 @@
 
 static uint32_t rng_state = 12345;
 
-// Коэффициенты из glibc
 #define LCG_A 1103515245
 #define LCG_C 12345
 #define LCG_M 2147483648 
