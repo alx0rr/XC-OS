@@ -30,7 +30,6 @@ typedef struct {
 #define IDT_FLAG_INTERRUPT (0xE << 0)
 #define IDT_FLAG_TRAP (0xF << 0)
 
-// Коды исключений
 #define INT_DIVIDE_BY_ZERO 0
 #define INT_DEBUG 1
 #define INT_NMI 2
