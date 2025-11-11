@@ -60,20 +60,30 @@ void drawchar_at_pos(
     bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color);
 }
 
+void scroll() {
+    uint32_t h = fb_get_height();
+    uint32_t w = fb_get_width();
+    uint32_t* fb = fb_get_buffer();
+    uint32_t pitch = w * 4;
+    uint32_t line_size = 14 * pitch;
+
+    for (uint32_t y = 0; y < h - 14; y++)
+        memcpy((uint8_t*)fb + y * pitch, (uint8_t*)fb + (y + 14) * pitch, pitch);
+
+    memset((uint8_t*)fb + (h - 14) * pitch, 0, line_size);
+    ypos -= 14;
+}
 
 void putchar(char c) {
     if (c == '\n') {
         xpos = 0;
         ypos += 14;
+        if (ypos + 14 >= fb_get_height()) scroll();
     } else if (c == '\r') {
         xpos = 0;
-    } else if (c == '\b') {  // backspace
+    } else if (c == '\b') {
         if (xpos >= 8) {
             xpos -= 8;
-            drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
-        } else if (ypos >= 14) {
-            ypos -= 14;
-            xpos = fb_get_width() - 8;
             drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
         }
     } else {
@@ -82,9 +92,11 @@ void putchar(char c) {
         if (xpos >= fb_get_width()) {
             xpos = 0;
             ypos += 14;
+            if (ypos + 14 >= fb_get_height()) scroll();
         }
     }
 }
+
 
 
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
