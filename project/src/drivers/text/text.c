@@ -64,24 +64,21 @@ void drawchar_at_pos(
 void scroll() {
     uint32_t w = fb_get_width();
     uint32_t h = fb_get_height();
-    uint32_t pitch = w * 4;
-    uint32_t line_size = 14 * pitch;
 
-    for (uint32_t y = 0; y < h - 14; y++) {
+    for (uint32_t y = 14; y < h; y++) {
         for (uint32_t x = 0; x < w; x++) {
-            uint32_t src_y = y + 14;
+            uint32_t src_y = y;
+            uint32_t dst_y = y - 14;
             uint32_t color = 0;
             
-            if (src_y < h) {
-                vbe_info_t vbe = get_vbe_struct();
-                uint8_t* fb = vbe_get_framebuffer();
-                if (vbe.bpp == 32) {
-                    uint32_t* pixel = (uint32_t*)(fb + src_y * vbe.pitch + x * 4);
-                    color = *pixel;
-                }
+            vbe_info_t vbe = get_vbe_struct();
+            uint8_t* fb = vbe_get_framebuffer();
+            if (vbe.bpp == 32) {
+                uint32_t* pixel = (uint32_t*)(fb + src_y * vbe.pitch + x * 4);
+                color = *pixel;
             }
             
-            fb_putpixel(x, y, color);
+            fb_putpixel(x, dst_y, color);
         }
     }
 
