@@ -13,7 +13,6 @@ void memory_stress_test() {
     
     void* ptrs[10];
     
-    // Выделить память
     printf("{FG(255,255,0)}Allocating 10 blocks of 50 MB...\n");
     for (int i = 0; i < 10; i++) {
         ptrs[i] = pmm_malloc(50 * 1024 * 1024);
@@ -30,7 +29,6 @@ void memory_stress_test() {
     printf("\n{FG(255,255,0)}Press any key to free...\n");
     keyboard_input();
     
-    // Освободить память
     printf("{FG(255,255,0)}Freeing all blocks...\n\n");
     for (int i = 0; i < 10; i++) {
         if (ptrs[i]) {
