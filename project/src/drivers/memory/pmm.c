@@ -10,7 +10,6 @@ void init_pmm() {
     mmap.count = *(uint32_t*)MMAP_COUNT_ADDR;
     mmap.entries = (mmap_entry_t*)MMAP_ADDR;
     
-    // Рассчитать общий размер доступной памяти
     total_heap_size = 0;
     for (uint32_t i = 0; i < mmap.count; i++) {
         if (mmap.entries[i].type == MMAP_TYPE_USABLE) {
@@ -18,7 +17,6 @@ void init_pmm() {
         }
     }
     
-    // Инициализировать первый блок памяти
     heap_start->size = total_heap_size - sizeof(block_header_t);
     heap_start->free = 1;
     heap_start->next = 0;
@@ -34,15 +32,12 @@ memory_map_t get_mmap() {
 void* pmm_malloc(uint32_t size) {
     if (size == 0) return 0;
     
-    // Выровнять размер для лучшей производительности
     size = (size + 3) & ~3;
     
     block_header_t* current = heap_start;
     
-    // Поиск свободного блока (First Fit)
     while (current) {
         if (current->free && current->size >= size) {
-            // Если блок значительно больше, чем нужно, разделить его
             if (current->size > size + sizeof(block_header_t)) {
                 block_header_t* new_block = 
                     (block_header_t*)((uint8_t*)current + sizeof(block_header_t) + size);
@@ -67,17 +62,15 @@ void* pmm_malloc(uint32_t size) {
         current = current->next;
     }
     
-    return 0; // Недостаточно памяти
+    return 0;
 }
 
 void pmm_free(void* ptr) {
     if (!ptr) return;
     
-    // Получить заголовок блока
     block_header_t* block = (block_header_t*)((uint8_t*)ptr - sizeof(block_header_t));
     block->free = 1;
     
-    // Объединить с предыдущим блоком, если он свободен
     if (block->prev && block->prev->free) {
         block->prev->size += block->size + sizeof(block_header_t);
         block->prev->next = block->next;
@@ -88,8 +81,7 @@ void pmm_free(void* ptr) {
         
         block = block->prev;
     }
-    
-    // Объединить со следующим блоком, если он свободен
+
     if (block->next && block->next->free) {
         block->size += block->next->size + sizeof(block_header_t);
         block->next = block->next->next;
@@ -121,7 +113,6 @@ void pmm_print_stats() {
         current = current->next;
     }
     
-    // Вычислить фрагментацию (количество свободных блоков)
     if (free_blocks > 1) {
         fragmentation = free_blocks - 1;
     }
@@ -130,23 +121,16 @@ void pmm_print_stats() {
     uint32_t percent_used = (total_used * 100) / total_memory;
     uint32_t percent_free = (total_free * 100) / total_memory;
     
-    // Вывод информации
-    // Используйте printf или собственную функцию вывода в консоль
-    printf("=== Memory Statistics ===\n");
-    printf("Total Memory: %u MB\n", total_memory / (1024 * 1024));
-    printf("Used: %u MB (%u%%)\n", total_used / (1024 * 1024), percent_used);
-    printf("Free: %u MB (%u%%)\n", total_free / (1024 * 1024), percent_free);
-    printf("Used Blocks: %u\n", used_blocks);
-    printf("Free Blocks: %u\n", free_blocks);
-    printf("Fragmentation: %u\n", fragmentation);
-    printf("========================\n");
+    printf("Mem: %uMB used/%uMB free (%u%%/%u%%) | blk %u/%u | frag %u\n",
+    total_used / 1048576, total_free / 1048576,
+    percent_used, percent_free,
+    used_blocks, free_blocks, fragmentation);
 }
 
 void pmm_defragment() {
     block_header_t* current = heap_start;
     
     while (current && current->next) {
-        // Если текущий блок свободен и следующий тоже свободен, объединить
         if (current->free && current->next->free) {
             current->size += current->next->size + sizeof(block_header_t);
             current->next = current->next->next;
@@ -155,7 +139,6 @@ void pmm_defragment() {
                 current->next->prev = current;
             }
             
-            // Не переходить к следующему, проверить снова
             continue;
         }
         
