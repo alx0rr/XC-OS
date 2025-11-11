@@ -1,7 +1,7 @@
 [bits 16]
 
 MMAP_ADDR equ 0x8000
-MMAP_BUFFER equ 0x9000    ; Временный буфер для BIOS
+MMAP_BUFFER equ 0x9000
 MAX_MMAP_ENTRIES equ 128
 
 get_memory_map:
@@ -20,7 +20,7 @@ get_memory_map:
     mov dword [0x7FFC], 0
     
 .mmap_loop:
-    mov di, MMAP_BUFFER     ; Всегда пишем в один и тот же буфер
+    mov di, MMAP_BUFFER
     
     mov edx, 0x534D4150
     mov eax, 0xE820
@@ -31,16 +31,15 @@ get_memory_map:
     
     cmp edx, 0x534D4150
     jne .mmap_done
-    
-    ; Копируем 20 байт из MMAP_BUFFER в нужное место
+
     mov si, MMAP_BUFFER
     mov ax, bp
     mov cx, 20
-    mul cx                  ; ax = bp * 20
+    mul cx              
     mov di, MMAP_ADDR
     add di, ax
     
-    mov cx, 5               ; Копируем 5 DWORD (20 байт)
+    mov cx, 5            
     rep movsd
     
     inc bp
