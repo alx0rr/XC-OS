@@ -1,6 +1,7 @@
 #include "../../include/graphics/framebuffer.h"
 #include "../../include/font.h"
 #include "../../lib/string.h"
+#include "../include/graphics/vbe.h"
 
 #define RGB(r, g, b)       ((uint32_t)(((r) << 16) | ((g) << 8) | (b)))
 #define RGBA(r, g, b, a)   ((uint32_t)(((r) << 16) | ((g) << 8) | (b) | ((a) << 24)))
@@ -61,16 +62,35 @@ void drawchar_at_pos(
 }
 
 void scroll() {
-    uint32_t h = fb_get_height();
     uint32_t w = fb_get_width();
-    uint32_t* fb = fb_get_buffer();
+    uint32_t h = fb_get_height();
     uint32_t pitch = w * 4;
     uint32_t line_size = 14 * pitch;
 
-    for (uint32_t y = 0; y < h - 14; y++)
-        memcpy((uint8_t*)fb + y * pitch, (uint8_t*)fb + (y + 14) * pitch, pitch);
+    for (uint32_t y = 0; y < h - 14; y++) {
+        for (uint32_t x = 0; x < w; x++) {
+            uint32_t src_y = y + 14;
+            uint32_t color = 0;
+            
+            if (src_y < h) {
+                vbe_info_t vbe = get_vbe_struct();
+                uint8_t* fb = vbe_get_framebuffer();
+                if (vbe.bpp == 32) {
+                    uint32_t* pixel = (uint32_t*)(fb + src_y * vbe.pitch + x * 4);
+                    color = *pixel;
+                }
+            }
+            
+            fb_putpixel(x, y, color);
+        }
+    }
 
-    memset((uint8_t*)fb + (h - 14) * pitch, 0, line_size);
+    for (uint32_t y = h - 14; y < h; y++) {
+        for (uint32_t x = 0; x < w; x++) {
+            fb_putpixel(x, y, 0);
+        }
+    }
+    
     ypos -= 14;
 }
 
