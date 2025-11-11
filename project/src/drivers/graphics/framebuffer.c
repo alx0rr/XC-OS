@@ -1,9 +1,6 @@
 #include "../include/graphics/vbe.h"
 #include "../include/graphics/framebuffer.h"
 
-uint8_t* fb_get_buffer() {
-    return vbe_get_framebuffer();
-}
 
 void fb_putpixel(uint16_t x, uint16_t y, uint32_t color) {
     vbe_info_t vbe = get_vbe_struct();

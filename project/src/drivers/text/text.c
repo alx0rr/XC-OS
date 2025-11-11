@@ -1,7 +1,6 @@
 #include "../../include/graphics/framebuffer.h"
 #include "../../include/font.h"
 #include "../../lib/string.h"
-#include "../include/graphics/vbe.h"
 
 #define RGB(r, g, b)       ((uint32_t)(((r) << 16) | ((g) << 8) | (b)))
 #define RGBA(r, g, b, a)   ((uint32_t)(((r) << 16) | ((g) << 8) | (b) | ((a) << 24)))
@@ -61,44 +60,20 @@ void drawchar_at_pos(
     bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color);
 }
 
-void scroll() {
-    uint32_t w = fb_get_width();
-    uint32_t h = fb_get_height();
-
-    for (uint32_t y = 0; y < h - 14; y++) {
-        for (uint32_t x = 0; x < w; x++) {
-            vbe_info_t vbe = get_vbe_struct();
-            uint8_t* fb = vbe_get_framebuffer();
-            uint32_t color = 0;
-            
-            if (vbe.bpp == 32) {
-                uint32_t* src_pixel = (uint32_t*)(fb + (y + 14) * vbe.pitch + x * 4);
-                color = *src_pixel;
-            }
-            
-            fb_putpixel(x, y, color);
-        }
-    }
-
-    for (uint32_t y = h - 14; y < h; y++) {
-        for (uint32_t x = 0; x < w; x++) {
-            fb_putpixel(x, y, bg_color);
-        }
-    }
-    
-    ypos -= 14;
-}
 
 void putchar(char c) {
     if (c == '\n') {
         xpos = 0;
         ypos += 14;
-        if (ypos + 14 >= fb_get_height()) scroll();
     } else if (c == '\r') {
         xpos = 0;
-    } else if (c == '\b') {
+    } else if (c == '\b') {  // backspace
         if (xpos >= 8) {
             xpos -= 8;
+            drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
+        } else if (ypos >= 14) {
+            ypos -= 14;
+            xpos = fb_get_width() - 8;
             drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
         }
     } else {
@@ -107,11 +82,9 @@ void putchar(char c) {
         if (xpos >= fb_get_width()) {
             xpos = 0;
             ypos += 14;
-            if (ypos + 14 >= fb_get_height()) scroll();
         }
     }
 }
-
 
 
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
