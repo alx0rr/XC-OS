@@ -37,9 +37,9 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Compiling libs..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $lib_src/string.c -o $build_dir/string.o
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $lib_src/time.c -o $build_dir/time.o
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $lib_src/random.c -o $build_dir/random.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $lib_src/string.c -o $build_dir/string.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $lib_src/time.c -o $build_dir/time.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $lib_src/random.c -o $build_dir/random.o
 if [ $? -ne 0 ]; then
     echo "Error compiling libs"
     exit 1
@@ -47,15 +47,15 @@ fi
 
 
 echo "Compiling VBE Driver..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/graphics/vbe.c -o $build_dir/vbe.o
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/graphics/framebuffer.c -o $build_dir/framebuffer.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/graphics/vbe.c -o $build_dir/vbe.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/graphics/framebuffer.c -o $build_dir/framebuffer.o
 if [ $? -ne 0 ]; then
     echo "Error compiling VBE Driver"
     exit 1
 fi
 
 echo "Compiling Memory Manager..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/memory/pmm.c -o $build_dir/pmm.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/memory/pmm.c -o $build_dir/pmm.o
 if [ $? -ne 0 ]; then
     echo "Error compiling Memory Manager"
     exit 1
@@ -63,21 +63,21 @@ fi
 
 
 echo "Compiling Kernel text manager..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/text/text.c -o $build_dir/text.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/text/text.c -o $build_dir/text.o
 if [ $? -ne 0 ]; then
     echo "Error Kernel text manager"
     exit 1
 fi
 
 echo "Compiling keyboard driver..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/input/keyboard.c -o $build_dir/keyboard.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/input/keyboard.c -o $build_dir/keyboard.o
 if [ $? -ne 0 ]; then
     echo "Error compiling keyboard driver"
     exit 1
 fi
 
 echo "Compiling cpu driver..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $drivers_src/cpu/cpu.c -o $build_dir/cpu.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/cpu/cpu.c -o $build_dir/cpu.o
 if [ $? -ne 0 ]; then
     echo "Error compiling Kernel"
     exit 1
@@ -92,7 +92,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Compiling IDT..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $kernel_src/interrupts/idt.c -o $build_dir/idt.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $kernel_src/interrupts/idt.c -o $build_dir/idt.o
 if [ $? -ne 0 ]; then
     echo "Error compiling IDT"
     exit 1
@@ -101,7 +101,7 @@ fi
 
 
 echo "Compiling Kernel..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -I$src_dir/include -c $kernel_src/kernel.c -o $build_dir/kernel.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $kernel_src/kernel.c -o $build_dir/kernel.o
 if [ $? -ne 0 ]; then
     echo "Error compiling Kernel"
     exit 1
