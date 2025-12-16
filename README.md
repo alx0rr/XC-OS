@@ -8,10 +8,16 @@ Please think carefully before installing it on real hardware.
 
 
 
-building img
+building the img file with build.sh:
 </div>
 
 ```shell
-cd project
-sh build.sh
+cd project && sh build.sh
+```
+
+<div align="center">
+or use the Makefile to build img file:
+</div>
+```shell
+cd project && make
 ```
