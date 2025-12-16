@@ -4,9 +4,7 @@
 #include "../include/memory/pmm.h"
 #include "../lib/time.h"
 #include "../lib/random.h"
-
-
-
+#include "../include/input/keyboard.h"
 
 void memory_stress_test() {
     printf("{FG(100,200,255)}=== Memory Stress Test ===\n\n");
@@ -38,8 +36,6 @@ void memory_stress_test() {
     
     pmm_print_stats();
 }
-
-
 
 void help() {
     printf("Available command:\nhelp\nclear\nreboot\ntime\nrandom\ncpu\nmemtest\nmmap\n");
@@ -80,7 +76,3 @@ void random_demo(){
     
     printf("\n");
 }
-
-
-
-
