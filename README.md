@@ -18,5 +18,5 @@ cd project && sh build.sh
 <div align="center">  
 ...or use the Makefile to build img file:  
 </div>  
-```shell
+```shell  
 cd project && make
