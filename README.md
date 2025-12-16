@@ -20,3 +20,4 @@ cd project && sh build.sh
 </div>  
 ```shell  
 cd project && make
+```
