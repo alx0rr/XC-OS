@@ -2,8 +2,6 @@
 #include "../../include/storage/ata.h"
 #include "../../include/text.h"
 #include "../../lib/string.h"
-#include <string.h>
-#include <stdio.h>
 
 #define XCFS_START_SECTOR 100
 
