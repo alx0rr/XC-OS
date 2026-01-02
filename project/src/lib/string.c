@@ -195,14 +195,6 @@ void itoa (char *buf, int base, int d)
     }
 }
 
-
-
-
-
-
-
-
-
 int vsnprintf(char *str, size_t size, const char *format, va_list args) {
     char *out = str, *end = str + size - 1;
     const char *p = format;

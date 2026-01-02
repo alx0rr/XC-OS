@@ -27,5 +27,3 @@ void fb_fill(uint32_t color) {
 
 uint16_t fb_get_height() { return vbe_get_height(); }
 uint16_t fb_get_width() { return vbe_get_width(); }
-
-//TODO: свап буферов, подсчет коло-ва фпс 

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# git-sync.sh
+# gsh - Git Sync Helper
 # Usage:
 #   ./git-sync.sh push ["commit message"]   # stage all, commit (with message or default) and push to origin/main
 #   ./git-sync.sh fetch                      # fetch all remotes and pull (rebase + autostash)
+#   ./git-sync.sh list                       # show last 20 branches (local + remotes) by commit date
+#   ./git-sync.sh rollback <branch>          # rewind repo: make `main` point to <branch> and reset working tree
 
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
-# Use an array so arguments are passed safely (prevents embedded-quote issues)
 GIT_CMD=(git -C "$REPO_ROOT")
 
 print_usage() {
@@ -17,10 +18,14 @@ Usage: $(basename "$0") <push|fetch> [commit-message]
 Commands:
   push [message]   Stage all changes, commit (message or auto) and push to origin/main
   fetch            Fetch all remotes and pull --rebase --autostash
+  list             Show last 20 branches (local + remotes) sorted by last commit date
+  rollback <name>  Force `main` to point to <name> and reset working tree to it (destructive)
 
 Examples:
   $(basename "$0") push "Save local changes"
   $(basename "$0") fetch
+  $(basename "$0") list
+  $(basename "$0") rollback feature/foo
 EOF
 }
 
@@ -34,14 +39,13 @@ shift || true
 
 case "$cmd" in
   push)
-    # Check for any changes
     changes="$(${GIT_CMD[@]} status --porcelain)"
     if [ -z "$changes" ]; then
       echo "No changes to commit."
       exit 0
     fi
 
-    msg="${*:-}"  # remaining args joined
+    msg="${*:-}"
     if [ -z "$msg" ]; then
       msg="Auto-commit: $(date -u +"%Y-%m-%d %H:%M:%SZ")"
     fi
@@ -69,6 +73,38 @@ case "$cmd" in
     ${GIT_CMD[@]} fetch --all --prune
     ${GIT_CMD[@]} pull --rebase --autostash
     echo "Fetch & pull complete."
+    ;;
+
+  list)
+    echo "Listing last 20 branches (local + remotes) by last commit date..."
+    ${GIT_CMD[@]} for-each-ref --sort=-committerdate --format='%(refname:short) %(committerdate:iso8601)' refs/heads refs/remotes | sed 's@refs/remotes/@@' | awk '!seen[$0]++' | head -n 20
+    ;;
+
+  rollback)
+    if [ $# -lt 1 ]; then
+      echo "Usage: $(basename "$0") rollback <branch>" >&2
+      exit 2
+    fi
+    target="$1"
+
+    echo "Fetching remotes to ensure refs are up-to-date..."
+    ${GIT_CMD[@]} fetch --all --prune
+
+    if ${GIT_CMD[@]} show-ref --verify --quiet "refs/heads/$target"; then
+      ref="refs/heads/$target"
+    elif ${GIT_CMD[@]} show-ref --verify --quiet "refs/remotes/origin/$target"; then
+      ref="refs/remotes/origin/$target"
+    else
+      echo "Branch '$target' not found locally or on origin." >&2
+      exit 3
+    fi
+
+    echo "Rolling back: forcing 'main' to point to $target (ref: $ref) and resetting working tree..."
+
+    ${GIT_CMD[@]} checkout -B main "$ref"
+    ${GIT_CMD[@]} reset --hard "$ref"
+
+    echo "Rollback complete: 'main' now matches '$target'."
     ;;
 
   -h|--help)

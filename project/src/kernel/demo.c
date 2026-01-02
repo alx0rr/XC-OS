@@ -37,10 +37,6 @@ void memory_stress_test() {
     pmm_print_stats();
 }
 
-void help() {
-    printf("Available command:\nhelp\nclear\nreboot\ntime\nrandom\ncpu\nmemtest\nmmap\n");
-}
-
 void time_demo(){
     printf("TIME NOW DEMO");
     datetime_t now = time_get_datetime();
