@@ -1,4 +1,3 @@
-// xcfs.h
 #ifndef XCFS_H
 #define XCFS_H
 
@@ -10,14 +9,14 @@
 #define XCFS_MAX_NAME 56
 #define XCFS_MAX_FILES 1024
 #define XCFS_DATA_START 248
+#define XCFS_DATA_START_SECTOR XCFS_DATA_START
 
 typedef struct {
     uint32_t magic;
     uint32_t version;
     uint32_t total_sectors;
     uint32_t file_count;
-    uint32_t data_start_sector;
-    uint32_t reserved[11];
+    uint32_t reserved[12];
 } __attribute__((packed)) xcfs_header_t;
 
 typedef struct {
