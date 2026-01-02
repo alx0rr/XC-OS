@@ -8,25 +8,6 @@
 static xcfs_context_t xcfs_ctx = {0};
 static xcfs_header_t xcfs_header = {0};
 static xcfs_entry_t xcfs_entries[XCFS_MAX_FILES] = {0};
-static uint8_t xcfs_sector_buf[XCFS_SECTOR_SIZE];
-
-static inline void xcfs_enable_interrupts(void) {
-    __asm__ volatile("sti");
-}
-
-static inline void xcfs_disable_interrupts(void) {
-    __asm__ volatile("cli");
-}
-
-static inline uint32_t xcfs_save_flags(void) {
-    uint32_t flags;
-    __asm__ volatile("pushf; pop %0" : "=r"(flags));
-    return flags;
-}
-
-static inline void xcfs_restore_flags(uint32_t flags) {
-    __asm__ volatile("push %0; popf" :: "r"(flags));
-}
 
 static void xcfs_sort_entries_by_start(void) {
     for (uint32_t i = 0; i + 1 < xcfs_header.file_count; i++) {
@@ -71,19 +52,17 @@ static uint32_t xcfs_find_free_space(uint32_t size) {
 }
 
 void xcfs_init(uint8_t drive) {
-    uint32_t flags = xcfs_save_flags();
+    uint8_t buffer[XCFS_SECTOR_SIZE];
     
     xcfs_ctx.drive = drive;
-    if (ata_read_sector(drive, XCFS_START_SECTOR, xcfs_sector_buf) < 0) {
+    if (ata_read_sector(drive, XCFS_START_SECTOR, buffer) < 0) {
         printf("{FG(255,0,0)}XCFS init failed\n");
-        xcfs_restore_flags(flags);
         return;
     }
-    memcpy(&xcfs_header, xcfs_sector_buf, sizeof(xcfs_header_t));
+    memcpy(&xcfs_header, buffer, sizeof(xcfs_header_t));
     if (xcfs_header.magic != XCFS_MAGIC) {
         printf("{FG(255,165,0)}XCFS not found, formatting...\n");
         xcfs_format(drive, 16384);
-        xcfs_restore_flags(flags);
         return;
     }
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
@@ -94,69 +73,55 @@ void xcfs_init(uint8_t drive) {
 
     uint32_t max_entry_bytes = XCFS_MAX_FILES * sizeof(xcfs_entry_t);
     for (uint32_t i = 0; i < header_sectors; i++) {
-        if (ata_read_sector(drive, XCFS_START_SECTOR + 1 + i, xcfs_sector_buf) < 0) {
-            xcfs_restore_flags(flags);
-            return;
-        }
+        if (ata_read_sector(drive, XCFS_START_SECTOR + 1 + i, buffer) < 0) return;
         uint32_t dest_offset = i * entries_per_sector * sizeof(xcfs_entry_t);
         if (dest_offset >= max_entry_bytes) break;
         uint32_t bytes_to_copy = XCFS_SECTOR_SIZE;
         if (dest_offset + bytes_to_copy > max_entry_bytes)
             bytes_to_copy = max_entry_bytes - dest_offset;
-        memcpy(((uint8_t*)xcfs_entries) + dest_offset, xcfs_sector_buf, bytes_to_copy);
+        memcpy(((uint8_t*)xcfs_entries) + dest_offset, buffer, bytes_to_copy);
     }
     xcfs_ctx.initialized = 1;
     printf("{FG(0,255,0)}XCFS initialized (%u files)\n", xcfs_header.file_count);
-    
-    xcfs_restore_flags(flags);
 }
 
 void xcfs_format(uint8_t drive, uint32_t total_sectors) {
-    uint32_t flags = xcfs_save_flags();
+    uint8_t buffer[XCFS_SECTOR_SIZE];
     
     xcfs_header.magic = XCFS_MAGIC;
     xcfs_header.version = XCFS_VERSION;
     xcfs_header.total_sectors = total_sectors;
     xcfs_header.file_count = 0;
     xcfs_header.data_start_sector = XCFS_DATA_START;
-    memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
-    memcpy(xcfs_sector_buf, &xcfs_header, sizeof(xcfs_header_t));
-    ata_write_sector(drive, XCFS_START_SECTOR, xcfs_sector_buf);
-    memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
+    memset(buffer, 0, XCFS_SECTOR_SIZE);
+    memcpy(buffer, &xcfs_header, sizeof(xcfs_header_t));
+    ata_write_sector(drive, XCFS_START_SECTOR, buffer);
+    memset(buffer, 0, XCFS_SECTOR_SIZE);
     for (uint32_t i = XCFS_START_SECTOR + 1; i < xcfs_header.data_start_sector; i++)
-        ata_write_sector(drive, i, xcfs_sector_buf);
+        ata_write_sector(drive, i, buffer);
     xcfs_ctx.drive = drive;
     xcfs_ctx.initialized = 1;
     printf("{FG(0,255,0)}XCFS formatted\n");
-    
-    xcfs_restore_flags(flags);
 }
 
 int xcfs_create(const char* name, uint32_t size) {
     if (!xcfs_ctx.initialized) return -1;
     
-    uint32_t flags = xcfs_save_flags();
+    if (size == 0) size = XCFS_SECTOR_SIZE;
     
+    uint8_t buffer[XCFS_SECTOR_SIZE];
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
     if (entries_per_sector == 0) entries_per_sector = 1;
     uint32_t max_header_sectors = xcfs_get_data_start() - (XCFS_START_SECTOR + 1);
     uint32_t max_files_possible = max_header_sectors * entries_per_sector;
 
-    if (xcfs_header.file_count >= XCFS_MAX_FILES) {
-        xcfs_restore_flags(flags);
-        return -1;
-    }
+    if (xcfs_header.file_count >= XCFS_MAX_FILES) return -1;
     if (XCFS_MAX_FILES > max_files_possible) {
-        if (xcfs_header.file_count >= max_files_possible) {
-            xcfs_restore_flags(flags);
-            return -1;
-        }
+        if (xcfs_header.file_count >= max_files_possible) return -1;
     }
     for (uint32_t i = 0; i < xcfs_header.file_count; i++) {
-        if (strcmp(xcfs_entries[i].name, name) == 0) {
-            xcfs_restore_flags(flags);
+        if (strcmp(xcfs_entries[i].name, name) == 0)
             return -1;
-        }
     }
     xcfs_entry_t* entry = &xcfs_entries[xcfs_header.file_count];
     strncpy(entry->name, name, XCFS_MAX_NAME - 1);
@@ -166,31 +131,29 @@ int xcfs_create(const char* name, uint32_t size) {
     entry->flags = 0;
     xcfs_header.file_count++;
 
-    memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
-    memcpy(xcfs_sector_buf, &xcfs_header, sizeof(xcfs_header_t));
-    ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR, xcfs_sector_buf);
+    memset(buffer, 0, XCFS_SECTOR_SIZE);
+    memcpy(buffer, &xcfs_header, sizeof(xcfs_header_t));
+    ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR, buffer);
 
     uint32_t entry_index = xcfs_header.file_count - 1;
     uint32_t entry_sector = entry_index / entries_per_sector;
-    memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
+    memset(buffer, 0, XCFS_SECTOR_SIZE);
     uint32_t src_offset = entry_sector * entries_per_sector * sizeof(xcfs_entry_t);
     uint32_t max_entry_bytes = XCFS_MAX_FILES * sizeof(xcfs_entry_t);
     uint32_t bytes_to_copy = XCFS_SECTOR_SIZE;
     if (src_offset >= max_entry_bytes) bytes_to_copy = 0;
     else if (src_offset + bytes_to_copy > max_entry_bytes) bytes_to_copy = max_entry_bytes - src_offset;
-    if (bytes_to_copy) memcpy(xcfs_sector_buf, ((uint8_t*)xcfs_entries) + src_offset, bytes_to_copy);
-    ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + entry_sector, xcfs_sector_buf);
+    if (bytes_to_copy) memcpy(buffer, ((uint8_t*)xcfs_entries) + src_offset, bytes_to_copy);
+    ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + entry_sector, buffer);
 
     printf("{FG(0,255,0)}File created: %s (%u bytes)\n", name, size);
-    
-    xcfs_restore_flags(flags);
     return 0;
 }
 
 int xcfs_delete(const char* name) {
     if (!xcfs_ctx.initialized) return -1;
     
-    uint32_t flags = xcfs_save_flags();
+    uint8_t buffer[XCFS_SECTOR_SIZE];
     
     for (uint32_t i = 0; i < xcfs_header.file_count; i++) {
         if (strcmp(xcfs_entries[i].name, name) == 0) {
@@ -199,43 +162,40 @@ int xcfs_delete(const char* name) {
             xcfs_header.file_count--;
             uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
             if (entries_per_sector == 0) entries_per_sector = 1;
-            memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
-            memcpy(xcfs_sector_buf, &xcfs_header, sizeof(xcfs_header_t));
-            ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR, xcfs_sector_buf);
+            memset(buffer, 0, XCFS_SECTOR_SIZE);
+            memcpy(buffer, &xcfs_header, sizeof(xcfs_header_t));
+            ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR, buffer);
 
             uint32_t header_sectors = 0;
             if (xcfs_header.file_count > 0)
                 header_sectors = (xcfs_header.file_count + entries_per_sector - 1) / entries_per_sector;
             uint32_t max_entry_bytes = XCFS_MAX_FILES * sizeof(xcfs_entry_t);
             for (uint32_t s = 0; s < header_sectors; s++) {
-                memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
+                memset(buffer, 0, XCFS_SECTOR_SIZE);
                 uint32_t src_offset = s * entries_per_sector * sizeof(xcfs_entry_t);
                 uint32_t bytes_to_copy = XCFS_SECTOR_SIZE;
                 if (src_offset >= max_entry_bytes) bytes_to_copy = 0;
                 else if (src_offset + bytes_to_copy > max_entry_bytes) bytes_to_copy = max_entry_bytes - src_offset;
-                if (bytes_to_copy) memcpy(xcfs_sector_buf, ((uint8_t*)xcfs_entries) + src_offset, bytes_to_copy);
-                ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + s, xcfs_sector_buf);
+                if (bytes_to_copy) memcpy(buffer, ((uint8_t*)xcfs_entries) + src_offset, bytes_to_copy);
+                ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + s, buffer);
             }
 
             if (header_sectors < (xcfs_get_data_start() - (XCFS_START_SECTOR + 1))) {
-                memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
-                ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + header_sectors, xcfs_sector_buf);
+                memset(buffer, 0, XCFS_SECTOR_SIZE);
+                ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + header_sectors, buffer);
             }
 
             printf("{FG(0,255,0)}File deleted: %s\n", name);
-            xcfs_restore_flags(flags);
             return 0;
         }
     }
-    
-    xcfs_restore_flags(flags);
     return -1;
 }
 
 int xcfs_read(const char* name, uint8_t* buffer, uint32_t size) {
     if (!xcfs_ctx.initialized) return -1;
     
-    uint32_t flags = xcfs_save_flags();
+    uint8_t sector_buf[XCFS_SECTOR_SIZE];
     
     for (uint32_t i = 0; i < xcfs_header.file_count; i++) {
         if (strcmp(xcfs_entries[i].name, name) == 0) {
@@ -243,28 +203,22 @@ int xcfs_read(const char* name, uint8_t* buffer, uint32_t size) {
             uint32_t to_read = (size < entry->size) ? size : entry->size;
             uint32_t sectors = (to_read + XCFS_SECTOR_SIZE - 1) / XCFS_SECTOR_SIZE;
             for (uint32_t s = 0; s < sectors; s++) {
-                if (ata_read_sector(xcfs_ctx.drive, entry->start_sector + s, xcfs_sector_buf) < 0) {
-                    xcfs_restore_flags(flags);
+                if (ata_read_sector(xcfs_ctx.drive, entry->start_sector + s, sector_buf) < 0)
                     return -1;
-                }
                 uint32_t copy_size = (to_read > XCFS_SECTOR_SIZE) ? XCFS_SECTOR_SIZE : to_read;
-                memcpy(buffer + (s * XCFS_SECTOR_SIZE), xcfs_sector_buf, copy_size);
+                memcpy(buffer + (s * XCFS_SECTOR_SIZE), sector_buf, copy_size);
                 to_read -= copy_size;
             }
-            xcfs_restore_flags(flags);
             return 0;
         }
     }
-    
-    xcfs_restore_flags(flags);
     return -1;
 }
 
 int xcfs_write(const char* name, uint8_t* buffer, uint32_t size) {
     if (!xcfs_ctx.initialized) return -1;
     
-    uint32_t flags = xcfs_save_flags();
-    
+    uint8_t sector_buf[XCFS_SECTOR_SIZE];
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
     if (entries_per_sector == 0) entries_per_sector = 1;
     for (uint32_t i = 0; i < xcfs_header.file_count; i++) {
@@ -277,30 +231,25 @@ int xcfs_write(const char* name, uint8_t* buffer, uint32_t size) {
             uint32_t sectors = (size + XCFS_SECTOR_SIZE - 1) / XCFS_SECTOR_SIZE;
             uint32_t remaining = size;
             for (uint32_t s = 0; s < sectors; s++) {
-                memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
+                memset(sector_buf, 0, XCFS_SECTOR_SIZE);
                 uint32_t copy_size = (remaining > XCFS_SECTOR_SIZE) ? XCFS_SECTOR_SIZE : remaining;
-                memcpy(xcfs_sector_buf, buffer + (s * XCFS_SECTOR_SIZE), copy_size);
-                if (ata_write_sector(xcfs_ctx.drive, entry->start_sector + s, xcfs_sector_buf) < 0) {
-                    xcfs_restore_flags(flags);
+                memcpy(sector_buf, buffer + (s * XCFS_SECTOR_SIZE), copy_size);
+                if (ata_write_sector(xcfs_ctx.drive, entry->start_sector + s, sector_buf) < 0)
                     return -1;
-                }
                 remaining -= copy_size;
             }
             uint32_t sector_index = i / entries_per_sector;
-            memset(xcfs_sector_buf, 0, XCFS_SECTOR_SIZE);
+            memset(sector_buf, 0, XCFS_SECTOR_SIZE);
             uint32_t src_offset = sector_index * entries_per_sector * sizeof(xcfs_entry_t);
             uint32_t max_entry_bytes = XCFS_MAX_FILES * sizeof(xcfs_entry_t);
             uint32_t bytes_to_copy = XCFS_SECTOR_SIZE;
             if (src_offset >= max_entry_bytes) bytes_to_copy = 0;
             else if (src_offset + bytes_to_copy > max_entry_bytes) bytes_to_copy = max_entry_bytes - src_offset;
-            if (bytes_to_copy) memcpy(xcfs_sector_buf, ((uint8_t*)xcfs_entries) + src_offset, bytes_to_copy);
-            ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + sector_index, xcfs_sector_buf);
-            xcfs_restore_flags(flags);
+            if (bytes_to_copy) memcpy(sector_buf, ((uint8_t*)xcfs_entries) + src_offset, bytes_to_copy);
+            ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + sector_index, sector_buf);
             return 0;
         }
     }
-    
-    xcfs_restore_flags(flags);
     return -1;
 }
 
