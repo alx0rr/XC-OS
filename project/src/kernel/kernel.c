@@ -146,20 +146,12 @@ void cmd_free() {
     pmm_print_stats();
 }
 
-void cmd_uptime() {
-    datetime_t now = time_get_datetime();
-    printf("Current time: %d:%d:%d %d/%d/%d\n", 
-           now.hour, now.minute, now.second,
-           now.day, now.month, now.year);
-}
-
 void help() {
     printf("{FG(0,255,255)}=== System Commands ===\n");
     printf("  {FG(255,255,0)}help{FG(255,255,255)}      - Show this help\n");
     printf("  {FG(255,255,0)}clear{FG(255,255,255)}     - Clear screen\n");
     printf("  {FG(255,255,0)}reboot{FG(255,255,255)}    - Reboot system\n");
     printf("  {FG(255,255,0)}uname{FG(255,255,255)}     - System information\n");
-    printf("  {FG(255,255,0)}uptime{FG(255,255,255)}    - Show current time\n");
     printf("  {FG(255,255,0)}free{FG(255,255,255)}      - Memory usage\n");
     printf("  {FG(255,255,0)}cpu{FG(255,255,255)}       - CPU information\n");
     printf("\n");
@@ -175,7 +167,6 @@ void help() {
     printf("\n");
     printf("{FG(0,255,255)}=== Debug Commands ===\n");
     printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
-    printf("  {FG(255,255,0)}random{FG(255,255,255)}    - Random number demo\n");
 }
 
 void kernel_main() {
@@ -230,17 +221,11 @@ void kernel_main() {
         else if (strcmp(cmd, "free") == 0) {
             cmd_free();
         }
-        else if (strcmp(cmd, "uptime") == 0) {
-            cmd_uptime();
-        }
         else if (strcmp(cmd, "cpu") == 0) {
             cpu_print_info();
         }
         else if (strcmp(cmd, "memtest") == 0) {
             memory_stress_test();
-        }
-        else if (strcmp(cmd, "random") == 0) {
-            random_demo();
         }
         else if (strcmp(cmd, "reboot") == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");
