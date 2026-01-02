@@ -145,3 +145,33 @@ void pmm_defragment() {
         current = current->next;
     }
 }
+
+uint32_t pmm_get_total_memory() {
+    return total_heap_size;
+}
+
+uint32_t pmm_get_free_memory() {
+    uint32_t total_free = 0;
+    block_header_t* current = heap_start;
+    
+    while (current) {
+        if (current->free) {
+            total_free += current->size;
+        }
+        current = current->next;
+    }
+    return total_free;
+}
+
+uint32_t pmm_get_used_memory() {
+    uint32_t total_used = 0;
+    block_header_t* current = heap_start;
+    
+    while (current) {
+        if (!current->free) {
+            total_used += current->size;
+        }
+        current = current->next;
+    }
+    return total_used;
+}
