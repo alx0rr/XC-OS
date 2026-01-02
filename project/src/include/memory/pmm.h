@@ -38,5 +38,8 @@ void* pmm_malloc(uint32_t size);
 void pmm_free(void* ptr);
 void pmm_print_stats();
 void pmm_defragment();
+uint32_t pmm_get_total_memory();
+uint32_t pmm_get_free_memory();
+uint32_t pmm_get_used_memory();
 
 #endif
