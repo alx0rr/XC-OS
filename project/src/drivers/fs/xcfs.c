@@ -4,7 +4,6 @@
 #include "../../lib/string.h"
 
 #define XCFS_START_SECTOR 100
-#define XCFS_DATA_START_SECTOR 200
 
 static xcfs_context_t xcfs_ctx = {0};
 static xcfs_header_t xcfs_header = {0};
@@ -52,7 +51,7 @@ void xcfs_format(uint8_t drive, uint32_t total_sectors) {
     ata_write_sector(drive, XCFS_START_SECTOR, buffer);
     
     memset(buffer, 0, 512);
-    for(uint32_t i = XCFS_START_SECTOR + 1; i < XCFS_DATA_START_SECTOR; i++)
+    for(uint32_t i = XCFS_START_SECTOR + 1; i < XCFS_DATA_START; i++)
         ata_write_sector(drive, i, buffer);
     
     xcfs_ctx.drive = drive;
@@ -63,7 +62,7 @@ void xcfs_format(uint8_t drive, uint32_t total_sectors) {
 static uint32_t xcfs_find_free_space(uint32_t size) {
     uint32_t sectors_needed = (size + 511) / 512;
     if (sectors_needed == 0) sectors_needed = 1;
-    uint32_t best_start = XCFS_DATA_START_SECTOR;
+    uint32_t best_start = XCFS_DATA_START;
     
     for(uint32_t i = 0; i < xcfs_header.file_count; i++) {
         uint32_t file_sectors = (xcfs_entries[i].size + 511) / 512;
@@ -114,6 +113,13 @@ int xcfs_create(const char* name, uint32_t size) {
     memset(buffer, 0, XCFS_SECTOR_SIZE);
     memcpy(buffer, &xcfs_entries[entry_sector * entries_per_sector], XCFS_SECTOR_SIZE);
     ata_write_sector(xcfs_ctx.drive, XCFS_START_SECTOR + 1 + entry_sector, buffer);
+    
+    uint32_t sectors = (size + XCFS_SECTOR_SIZE - 1) / XCFS_SECTOR_SIZE;
+    if (sectors == 0) sectors = 1;
+    memset(buffer, 0, XCFS_SECTOR_SIZE);
+    for(uint32_t s = 0; s < sectors; s++) {
+        ata_write_sector(xcfs_ctx.drive, entry->start_sector + s, buffer);
+    }
     
     printf("{FG(0,255,0)}File created: %s (%u bytes)\n", name, size);
     return 0;
