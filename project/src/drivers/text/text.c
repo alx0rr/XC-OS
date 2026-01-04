@@ -230,8 +230,8 @@ void printf(const char *format, ...) {
 	}
 }
 
-void clear(){
-	fb_fill(RGB(0, 0, 0));
-	xpos = 0;
-	ypos = 0;
+void clear() {
+    fb_fill(bg_color);
+    xpos = X_MARGIN;
+    ypos = Y_MARGIN;
 }
