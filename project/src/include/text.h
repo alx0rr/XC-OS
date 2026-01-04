@@ -5,6 +5,9 @@
 
 #define CHAR_WIDTH 16
 #define CHAR_HEIGHT 28
+#define X_MARGIN 10
+#define Y_MARGIN 10
+#define FONT_SCALE 2
 
 void putchar(char c);
 void printf(const char *format, ...);

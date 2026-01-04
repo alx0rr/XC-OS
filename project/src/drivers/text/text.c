@@ -11,10 +11,8 @@
 #define B_PART(color) ((color) & 0xFF)
 #define A_PART(color) (((color) >> 24) & 0xFF)
 
-#define FONT_SCALE 2
-
-uint16_t xpos = 0;
-uint16_t ypos = 0;
+uint16_t xpos = X_MARGIN;
+uint16_t ypos = Y_MARGIN;
 uint32_t bg_color = 0;
 uint32_t fg_color = 0xFFFFFF;
 
@@ -73,11 +71,11 @@ void putchar(char c) {
 	if (c == '\n') {
 		xpos = 0;
 		ypos += CHAR_HEIGHT;
-		if (ypos + CHAR_HEIGHT >= fb_get_height()) {
-			fb_fill(bg_color);
-			xpos = 0;
-			ypos = 0;
-		}
+		if (ypos + CHAR_HEIGHT >= fb_get_height() - Y_MARGIN) {
+            fb_fill(bg_color);
+            xpos = X_MARGIN;
+            ypos = Y_MARGIN;
+        }
 	} else if (c == '\r') {
 		xpos = 0;
 	} else if (c == '\b') {
