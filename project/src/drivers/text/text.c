@@ -2,13 +2,9 @@
 #include "../../include/font.h"
 #include "../../lib/string.h"
 #include <stdint.h>
+#include <stddef.h>
 
 #define RGB(r, g, b) ((uint32_t)(((r) << 16) | ((g) << 8) | (b)))
-
-static uint16_t xpos = 0;
-static uint16_t ypos = 0;
-static uint32_t bg_color = 0;
-static uint32_t fg_color = 0xFFFFFF;
 
 static const uint8_t MY_FONT_W = 8;
 static const uint8_t MY_FONT_H = 13;
@@ -23,22 +19,31 @@ static void init_font_metrics() {
     int extra_v = (MY_FONT_H * BOLD_PERCENT + 99) / 100;
     if (extra_h < 0) extra_h = 0;
     if (extra_v < 0) extra_v = 0;
-    char_width = MY_FONT_W + extra_h;
-    line_height = MY_FONT_H + 1 + extra_v;
+    char_width = (uint8_t)(MY_FONT_W + extra_h);
+    line_height = (uint8_t)(MY_FONT_H + 1 + extra_v);
     font_metrics_inited = 1;
 }
+
+static uint16_t xpos = 0;
+static uint16_t ypos = 0;
+static uint32_t bg_color = 0;
+static uint32_t fg_color = 0xFFFFFF;
 
 void bitmapblt(uint16_t x, uint16_t y, uint8_t h, const uint8_t* bitpattern, uint32_t fore_color, uint32_t back_color) {
     init_font_metrics();
     int extra_h = (MY_FONT_W * BOLD_PERCENT + 99) / 100;
     int extra_v = (h * BOLD_PERCENT + 99) / 100;
+    if (extra_h < 0) extra_h = 0;
+    if (extra_v < 0) extra_v = 0;
     int total_w = MY_FONT_W + extra_h;
     int total_h = h + extra_v;
     uint32_t fbw = fb_get_width();
     uint32_t fbh = fb_get_height();
-    for (int yy = y; yy < y + total_h && yy < (int)fbh; yy++) {
-        for (int xx = x; xx < x + total_w && xx < (int)fbw; xx++) {
-            fb_putpixel(xx, yy, back_color);
+    int x0 = (int)x;
+    int y0 = (int)y;
+    for (int yy = y0; yy < y0 + total_h && yy < (int)fbh; yy++) {
+        for (int xx = x0; xx < x0 + total_w && xx < (int)fbw; xx++) {
+            if (xx >= 0 && yy >= 0) fb_putpixel((uint32_t)xx, (uint32_t)yy, back_color);
         }
     }
     for (uint32_t row = 0; row < h; row++) {
@@ -48,9 +53,9 @@ void bitmapblt(uint16_t x, uint16_t y, uint8_t h, const uint8_t* bitpattern, uin
             if (bit) {
                 for (int dy = 0; dy <= extra_v; dy++) {
                     for (int dx = 0; dx <= extra_h; dx++) {
-                        int px = x + col + dx;
-                        int py = y + row + dy;
-                        if (px >= 0 && px < (int)fbw && py >= 0 && py < (int)fbh) fb_putpixel(px, py, fore_color);
+                        int px = x0 + col + dx;
+                        int py = y0 + (int)row + dy;
+                        if (px >= 0 && py >= 0 && px < (int)fbw && py < (int)fbh) fb_putpixel((uint32_t)px, (uint32_t)py, fore_color);
                     }
                 }
             }
@@ -59,6 +64,7 @@ void bitmapblt(uint16_t x, uint16_t y, uint8_t h, const uint8_t* bitpattern, uin
 }
 
 void drawchar_at_pos(char c, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
+    init_font_metrics();
     bitmapblt(x, y, MY_FONT_H, &FontData[(size_t)(uint8_t)c * MY_FONT_H], fore_color, back_color);
 }
 
@@ -67,7 +73,7 @@ void putchar(char c) {
     if (c == '\n') {
         xpos = 0;
         ypos += line_height;
-        if (ypos + line_height >= fb_get_height()) {
+        if ((uint32_t)(ypos + line_height) >= fb_get_height()) {
             fb_fill(bg_color);
             xpos = 0;
             ypos = 0;
@@ -82,10 +88,10 @@ void putchar(char c) {
     } else {
         drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
         xpos += char_width;
-        if (xpos >= fb_get_width()) {
+        if ((uint32_t)xpos >= fb_get_width()) {
             xpos = 0;
             ypos += line_height;
-            if (ypos + line_height >= fb_get_height()) {
+            if ((uint32_t)(ypos + line_height) >= fb_get_height()) {
                 fb_fill(bg_color);
                 xpos = 0;
                 ypos = 0;
@@ -103,12 +109,13 @@ void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, 
     init_font_metrics();
     while (*str != '\0') {
         drawchar_at_pos(*str, x, y, fore_color, back_color);
-        x += char_width;
+        x = (uint16_t)(x + char_width);
         str++;
     }
 }
 
 void printf(const char *format, ...) {
+    init_font_metrics();
     char **arg = (char **) &format;
     int c;
     char buf[20];
