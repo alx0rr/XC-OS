@@ -16,7 +16,7 @@ typedef struct {
     uint32_t version;
     uint32_t total_sectors;
     uint32_t file_count;
-    uint32_t reserved[12];
+    uint32_t reserved[124];
 } __attribute__((packed)) xcfs_header_t;
 
 typedef struct {
@@ -24,7 +24,7 @@ typedef struct {
     uint32_t start_sector;
     uint32_t size;
     uint8_t flags;
-    uint8_t reserved[3];
+    uint8_t reserved[443];
 } __attribute__((packed)) xcfs_entry_t;
 
 typedef struct {
