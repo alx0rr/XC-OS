@@ -124,13 +124,7 @@ char* keyboard_input(void) {
                 if (buffer_index > 0) {
                     buffer_index--;
                     input_buffer[buffer_index] = '\0';
-                    
-                    if (xpos >= CHAR_WIDTH) {
-                        xpos -= CHAR_WIDTH;
-                    } else {
-                        xpos = 0;
-                    }
-                    drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
+                    printf("\b \b");
                 }
                 continue;
             }
@@ -139,7 +133,6 @@ char* keyboard_input(void) {
 
             if (c == '\n') {
                 input_buffer[buffer_index] = '\0';
-                printf("\n");
                 buffer_index = 0;
                 return input_buffer;
             }

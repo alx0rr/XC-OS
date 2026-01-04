@@ -10,6 +10,10 @@
 #define B_PART(color) ((color) & 0xFF)
 #define A_PART(color) (((color) >> 24) & 0xFF)
 
+#define CHAR_WIDTH 16
+#define CHAR_HEIGHT 28
+#define FONT_SCALE 2
+
 uint16_t xpos = 0;
 uint16_t ypos = 0;
 uint32_t bg_color = 0;
@@ -34,22 +38,24 @@ void bitmapblt(
 		{
 
 			if (i & *bitpattern) {
-				fb_putpixel(xx, yy, fore_color);
-				fb_putpixel(xx + 1, yy, fore_color);
-				fb_putpixel(xx, yy + 1, fore_color);
-				fb_putpixel(xx + 1, yy + 1, fore_color);
+				for (int sy = 0; sy < FONT_SCALE; sy++) {
+					for (int sx = 0; sx < FONT_SCALE; sx++) {
+						fb_putpixel(xx + sx, yy + sy, fore_color);
+					}
+				}
 			} else {
-				fb_putpixel(xx, yy, back_color);
-				fb_putpixel(xx + 1, yy, back_color);
-				fb_putpixel(xx, yy + 1, back_color);
-				fb_putpixel(xx + 1, yy + 1, back_color);
+				for (int sy = 0; sy < FONT_SCALE; sy++) {
+					for (int sx = 0; sx < FONT_SCALE; sx++) {
+						fb_putpixel(xx + sx, yy + sy, back_color);
+					}
+				}
 			}
 
-			xx += 2;
+			xx += FONT_SCALE;
 		}
 
 		bitpattern++;
-		yy += 2;
+		yy += FONT_SCALE;
 	}
 }
 
@@ -67,8 +73,8 @@ void drawchar_at_pos(
 void putchar(char c) {
 	if (c == '\n') {
 		xpos = 0;
-		ypos += 28;
-		if (ypos + 28 >= fb_get_height()) {
+		ypos += CHAR_HEIGHT;
+		if (ypos + CHAR_HEIGHT >= fb_get_height()) {
 			fb_fill(bg_color);
 			xpos = 0;
 			ypos = 0;
@@ -76,17 +82,16 @@ void putchar(char c) {
 	} else if (c == '\r') {
 		xpos = 0;
 	} else if (c == '\b') {
-		if (xpos >= 16) {
-			xpos -= 16;
-			drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
+		if (xpos >= CHAR_WIDTH) {
+			xpos -= CHAR_WIDTH;
 		}
 	} else {
 		drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
-		xpos += 16;
+		xpos += CHAR_WIDTH;
 		if (xpos >= fb_get_width()) {
 			xpos = 0;
-			ypos += 28;
-			if (ypos + 28 >= fb_get_height()) {
+			ypos += CHAR_HEIGHT;
+			if (ypos + CHAR_HEIGHT >= fb_get_height()) {
 				fb_fill(bg_color);
 				xpos = 0;
 				ypos = 0;
@@ -98,7 +103,7 @@ void putchar(char c) {
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
 	while (*str != '\0') {
 		drawchar_at_pos(*str, x, y, fore_color, back_color);
-		x += 16;
+		x += CHAR_WIDTH;
 		str++;
 	}
 }
