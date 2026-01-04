@@ -68,33 +68,33 @@ void drawchar_at_pos(
 }
 
 void putchar(char c) {
-	if (c == '\n') {
-		xpos = 0;
-		ypos += CHAR_HEIGHT;
-		if (ypos + CHAR_HEIGHT >= fb_get_height() - Y_MARGIN) {
+    if (c == '\n') {
+        xpos = X_MARGIN;
+        ypos += CHAR_HEIGHT * FONT_SCALE + LINE_SPACING;
+        if (ypos + CHAR_HEIGHT * FONT_SCALE >= fb_get_height() - Y_MARGIN) {
             fb_fill(bg_color);
             xpos = X_MARGIN;
             ypos = Y_MARGIN;
         }
-	} else if (c == '\r') {
-		xpos = 0;
-	} else if (c == '\b') {
-		if (xpos >= CHAR_WIDTH) {
-			xpos -= CHAR_WIDTH;
-		}
-	} else {
-		drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
-		xpos += CHAR_WIDTH;
-		if (xpos >= fb_get_width()) {
-			xpos = 0;
-			ypos += CHAR_HEIGHT;
-			if (ypos + CHAR_HEIGHT >= fb_get_height()) {
-				fb_fill(bg_color);
-				xpos = 0;
-				ypos = 0;
-			}
-		}
-	}
+    } else if (c == '\r') {
+        xpos = X_MARGIN;
+    } else if (c == '\b') {
+        if (xpos >= CHAR_WIDTH * FONT_SCALE + X_MARGIN) {
+            xpos -= CHAR_WIDTH * FONT_SCALE + CHAR_SPACING;
+        }
+    } else {
+        drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
+        xpos += CHAR_WIDTH * FONT_SCALE + CHAR_SPACING;
+        if (xpos >= fb_get_width() - X_MARGIN) {
+            xpos = X_MARGIN;
+            ypos += CHAR_HEIGHT * FONT_SCALE + LINE_SPACING;
+            if (ypos + CHAR_HEIGHT * FONT_SCALE >= fb_get_height() - Y_MARGIN) {
+                fb_fill(bg_color);
+                xpos = X_MARGIN;
+                ypos = Y_MARGIN;
+            }
+        }
+    }
 }
 
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
@@ -231,7 +231,7 @@ void printf(const char *format, ...) {
 }
 
 void clear(){
-	fb_fill(RGB(0, 0, 0));
-	xpos = 0;
-	ypos = 0;
+    fb_fill(bg_color);
+    xpos = X_MARGIN;
+    ypos = Y_MARGIN;
 }

@@ -8,6 +8,8 @@
 #define X_MARGIN 10
 #define Y_MARGIN 10
 #define FONT_SCALE 2
+#define CHAR_SPACING 2
+#define LINE_SPACING 3
 
 void putchar(char c);
 void printf(const char *format, ...);
