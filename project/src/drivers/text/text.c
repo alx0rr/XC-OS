@@ -14,7 +14,6 @@ uint16_t xpos = 0;
 uint16_t ypos = 0;
 uint32_t bg_color = 0;
 uint32_t fg_color = 0xFFFFFF;
-uint8_t font_weight = 2;
 
 void bitmapblt(
 	uint16_t x,
@@ -22,28 +21,28 @@ void bitmapblt(
 	uint8_t h,
 	uint8_t* bitpattern,
 	uint32_t fore_color,
-	uint32_t back_color,
-	uint8_t weight
+	uint32_t back_color
 )
 {
 	uint16_t xx;
+
 	uint16_t yy = y;
 	for (uint32_t j = 0; j < h; j++) {
+
 		xx = x;
-		for (uint32_t i = 128; i > 0; i >>= 1) {
-			if (i & *bitpattern) {
-				for (uint8_t wy = 0; wy < weight; wy++)
-					for (uint8_t wx = 0; wx < weight; wx++)
-						fb_putpixel(xx + wx, yy + wy, fore_color);
-			} else {
-				for (uint8_t wy = 0; wy < weight; wy++)
-					for (uint8_t wx = 0; wx < weight; wx++)
-						fb_putpixel(xx + wx, yy + wy, back_color);
-			}
-			xx += weight;
+		for (uint32_t i = 128; i > 0; i >>= 1)
+		{
+
+			if (i & *bitpattern)
+				fb_putpixel(xx, yy, fore_color);
+			else
+				fb_putpixel(xx, yy, back_color);
+
+			xx++;
 		}
+
 		bitpattern++;
-		yy += weight;
+		yy++;
 	}
 }
 
@@ -55,14 +54,14 @@ void drawchar_at_pos(
 	uint32_t back_color
 )
 {
-	bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color, font_weight);
+	bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color);
 }
 
 void putchar(char c) {
 	if (c == '\n') {
 		xpos = 0;
-		ypos += 14 * font_weight;
-		if (ypos + 14 * font_weight >= fb_get_height()) {
+		ypos += 14;
+		if (ypos + 14 >= fb_get_height()) {
 			fb_fill(bg_color);
 			xpos = 0;
 			ypos = 0;
@@ -70,17 +69,17 @@ void putchar(char c) {
 	} else if (c == '\r') {
 		xpos = 0;
 	} else if (c == '\b') {
-		if (xpos >= 8 * font_weight) {
-			xpos -= 8 * font_weight;
+		if (xpos >= 8) {
+			xpos -= 8;
 			drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
 		}
 	} else {
 		drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
-		xpos += 8 * font_weight;
+		xpos += 8;
 		if (xpos >= fb_get_width()) {
 			xpos = 0;
-			ypos += 14 * font_weight;
-			if (ypos + 14 * font_weight >= fb_get_height()) {
+			ypos += 14;
+			if (ypos + 14 >= fb_get_height()) {
 				fb_fill(bg_color);
 				xpos = 0;
 				ypos = 0;
@@ -92,7 +91,7 @@ void putchar(char c) {
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
 	while (*str != '\0') {
 		drawchar_at_pos(*str, x, y, fore_color, back_color);
-		x += 8 * font_weight;
+		x += 8;
 		str++;
 	}
 }
@@ -106,65 +105,83 @@ void printf(const char *format, ...) {
 
 	while ((c = *format++) != '\0') {
 		if (c == '{' && strncmp(format, "BG(", 3) == 0) {
+
 			format += 3;
 			int r = 0, g = 0, b = 0;
+
 			r = 0;
 			while (*format >= '0' && *format <= '9') {
 				r = r * 10 + (*format - '0');
 				format++;
 			}
+
 			if (*format == ',') format++;
+
 			g = 0;
 			while (*format >= '0' && *format <= '9') {
 				g = g * 10 + (*format - '0');
 				format++;
 			}
+
 			if (*format == ',') format++;
+
 			b = 0;
 			while (*format >= '0' && *format <= '9') {
 				b = b * 10 + (*format - '0');
 				format++;
 			}
+
 			if (*format == ')') format++;
 			if (*format == '}') format++;
+
 			bg_color = RGB(r, g, b);
 		} else if (c == '{' && strncmp(format, "FG(", 3) == 0) {
 			format += 3;
 			int r = 0, g = 0, b = 0;
+
 			r = 0;
 			while (*format >= '0' && *format <= '9') {
 				r = r * 10 + (*format - '0');
 				format++;
 			}
+
 			if (*format == ',') format++;
+
 			g = 0;
 			while (*format >= '0' && *format <= '9') {
 				g = g * 10 + (*format - '0');
 				format++;
 			}
+
 			if (*format == ',') format++;
+
 			b = 0;
 			while (*format >= '0' && *format <= '9') {
 				b = b * 10 + (*format - '0');
 				format++;
 			}
+
 			if (*format == ')') format++;
 			if (*format == '}') format++;
+
 			fg_color = RGB(r, g, b);
 		} else if (c != '%') {
 			putchar(c);
 		} else {
 			char *p, *p2;
 			int pad0 = 0, pad = 0;
+
 			c = *format++;
 			if (c == '0') {
 				pad0 = 1;
 				c = *format++;
 			}
+
 			if (c >= '0' && c <= '9') {
 				pad = c - '0';
 				c = *format++;
 			}
+
 			switch (c) {
 				case 'd':
 				case 'u':
@@ -187,6 +204,7 @@ void printf(const char *format, ...) {
 					if (!p) {
 						p = "(null)";
 					}
+
 				string:
 					for (p2 = p; *p2; p2++);
 					for (; p2 < p + pad; p2++)
@@ -194,6 +212,7 @@ void printf(const char *format, ...) {
 					while (*p)
 						putchar(*p++);
 					break;
+
 				default:
 					putchar(c);
 					break;
