@@ -2,12 +2,18 @@
 #define TEXT_H
 
 #include <stdint.h>
-
-#define FONT_SCALE_NUM 3
-#define FONT_SCALE_DENOM 2
-
-#define CHAR_WIDTH ((8 * FONT_SCALE_NUM) / FONT_SCALE_DENOM)
-#define CHAR_HEIGHT ((13 * FONT_SCALE_NUM) / FONT_SCALE_DENOM)
+/* CHAR_WIDTH = orig_CHAR_WIDTH / now_SCALE * new_SCALE
+CHAR_HEIGHT = orig_CHAR_HEIGHT / now_SCALE * new_SCALE
+ONLY INT! NOT FLOAT!
+*/
+/*
+#define CHAR_WIDTH 8
+#define CHAR_HEIGHT 14
+#define FONT_SCALE 1
+*/
+#define CHAR_WIDTH 16
+#define CHAR_HEIGHT 28
+#define FONT_SCALE 2
 
 #define X_MARGIN 50
 #define Y_MARGIN 50
@@ -23,4 +29,4 @@ extern uint16_t ypos;
 extern uint32_t fg_color;
 extern uint32_t bg_color;
 
-#endif
+#endif 

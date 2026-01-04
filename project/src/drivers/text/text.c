@@ -26,7 +26,6 @@ void bitmapblt(
 )
 {
 	uint16_t xx;
-	int scaled_width = (FONT_SCALE_NUM + FONT_SCALE_DENOM - 1) / FONT_SCALE_DENOM;
 
 	uint16_t yy = y;
 	for (uint32_t j = 0; j < h; j++) {
@@ -34,25 +33,26 @@ void bitmapblt(
 		xx = x;
 		for (uint32_t i = 128; i > 0; i >>= 1)
 		{
+
 			if (i & *bitpattern) {
-				for (int sy = 0; sy < scaled_width; sy++) {
-					for (int sx = 0; sx < scaled_width; sx++) {
+				for (int sy = 0; sy < FONT_SCALE; sy++) {
+					for (int sx = 0; sx < FONT_SCALE; sx++) {
 						fb_putpixel(xx + sx, yy + sy, fore_color);
 					}
 				}
 			} else {
-				for (int sy = 0; sy < scaled_width; sy++) {
-					for (int sx = 0; sx < scaled_width; sx++) {
+				for (int sy = 0; sy < FONT_SCALE; sy++) {
+					for (int sx = 0; sx < FONT_SCALE; sx++) {
 						fb_putpixel(xx + sx, yy + sy, back_color);
 					}
 				}
 			}
 
-			xx += scaled_width;
+			xx += FONT_SCALE;
 		}
 
 		bitpattern++;
-		yy += scaled_width;
+		yy += FONT_SCALE;
 	}
 }
 
