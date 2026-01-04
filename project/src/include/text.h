@@ -14,8 +14,8 @@ ONLY INT! NOT FLOAT!
 #define CHAR_HEIGHT 28
 #define FONT_SCALE 2
 */
-#define X_MARGIN 50
-#define Y_MARGIN 50
+#define X_MARGIN 0
+#define Y_MARGIN 0
 
 void putchar(char c);
 void printf(const char *format, ...);
