@@ -33,16 +33,23 @@ void bitmapblt(
 		for (uint32_t i = 128; i > 0; i >>= 1)
 		{
 
-			if (i & *bitpattern)
+			if (i & *bitpattern) {
 				fb_putpixel(xx, yy, fore_color);
-			else
+				fb_putpixel(xx + 1, yy, fore_color);
+				fb_putpixel(xx, yy + 1, fore_color);
+				fb_putpixel(xx + 1, yy + 1, fore_color);
+			} else {
 				fb_putpixel(xx, yy, back_color);
+				fb_putpixel(xx + 1, yy, back_color);
+				fb_putpixel(xx, yy + 1, back_color);
+				fb_putpixel(xx + 1, yy + 1, back_color);
+			}
 
-			xx++;
+			xx += 2;
 		}
 
 		bitpattern++;
-		yy++;
+		yy += 2;
 	}
 }
 
@@ -60,8 +67,8 @@ void drawchar_at_pos(
 void putchar(char c) {
 	if (c == '\n') {
 		xpos = 0;
-		ypos += 14;
-		if (ypos + 14 >= fb_get_height()) {
+		ypos += 28;
+		if (ypos + 28 >= fb_get_height()) {
 			fb_fill(bg_color);
 			xpos = 0;
 			ypos = 0;
@@ -69,17 +76,17 @@ void putchar(char c) {
 	} else if (c == '\r') {
 		xpos = 0;
 	} else if (c == '\b') {
-		if (xpos >= 8) {
-			xpos -= 8;
+		if (xpos >= 16) {
+			xpos -= 16;
 			drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
 		}
 	} else {
 		drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
-		xpos += 8;
+		xpos += 16;
 		if (xpos >= fb_get_width()) {
 			xpos = 0;
-			ypos += 14;
-			if (ypos + 14 >= fb_get_height()) {
+			ypos += 28;
+			if (ypos + 28 >= fb_get_height()) {
 				fb_fill(bg_color);
 				xpos = 0;
 				ypos = 0;
@@ -91,7 +98,7 @@ void putchar(char c) {
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
 	while (*str != '\0') {
 		drawchar_at_pos(*str, x, y, fore_color, back_color);
-		x += 8;
+		x += 16;
 		str++;
 	}
 }
