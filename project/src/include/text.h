@@ -5,12 +5,12 @@
 /* CHAR_WIDTH = orig_CHAR_WIDTH / now_SCALE * new_SCALE
 CHAR_HEIGHT = orig_CHAR_HEIGHT / now_SCALE * new_SCALE
 */
-#define CHAR_WIDTH 12
-#define CHAR_HEIGHT 21
+#define CHAR_WIDTH 16
+#define CHAR_HEIGHT 28
 #define FONT_SCALE 2
 
-#define X_MARGIN 30
-#define Y_MARGIN 30
+#define X_MARGIN 50
+#define Y_MARGIN 50
 
 void putchar(char c);
 void printf(const char *format, ...);
