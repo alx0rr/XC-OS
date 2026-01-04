@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define CHAR_WIDTH 10
+#define CHAR_HEIGHT 24
+
 void bitmapblt(
     uint16_t x, 
     uint16_t y,
@@ -21,9 +24,14 @@ void drawchar_at_pos(
     );
 
 void putchar(char c);
-void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color);
 void printf(const char *format, ...);
 void clear();
+void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color);
+void drawchar_at_pos(char c, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color);
 
+extern uint16_t xpos;
+extern uint16_t ypos;
+extern uint32_t fg_color;
+extern uint32_t bg_color;
 
 #endif 

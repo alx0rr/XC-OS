@@ -14,82 +14,82 @@ static bool shift_pressed = false;
 
 unsigned char keymap[128] =
 {
-    0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
-  '9', '0', '-', '=', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
-    0,			/* 29   - Control */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
- '\'', '`',   0,		/* Left shift */
- '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', ',', '.', '/',   0,				/* Right shift */
-  '*',
-    0,	/* Alt */
-  ' ',	/* Space bar */
-    0,	/* Caps lock */
-    0,	/* 59 - F1 key ... > */
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,	/* < ... F10 */
-    0,	/* 69 - Num lock*/
-    0,	/* Scroll Lock */
-    0,	/* Home key */
-    19,	/* Up Arrow */
-    0,	/* Page Up */
-  '-',
-    18,	/* Left Arrow */
+    0,  27, '1', '2', '3', '4', '5', '6', '7', '8',
+  '9', '0', '-', '=', '\b',
+  '\t',
+  'q', 'w', 'e', 'r',
+  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
     0,
-    17,	/* Right Arrow */
+  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
+ '\'', '`',   0,
+ '\\', 'z', 'x', 'c', 'v', 'b', 'n',
+  'm', ',', '.', '/',   0,
+  '*',
+    0,
+  ' ',
+    0,
+    0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,
+    0,
+    0,
+    0,
+    19,
+    0,
+  '-',
+    18,
+    0,
+    17,
   '+',
-    0,	/* 79 - End key*/
-    20,	/* Down Arrow */
-    0,	/* Page Down */
-    0,	/* Insert Key */
-    0,	/* Delete Key */
+    0,
+    20,
+    0,
+    0,
+    0,
     0,   0,   0,
-    0,	/* F11 Key */
-    0,	/* F12 Key */
-    0,	/* All other keys are undefined */
+    0,
+    0,
+    0,
 };
 
 unsigned char keymap_up[128] =
 {
-    0,  27, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
-  '(', ')', '_', '+', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '{', '}', '\n',	/* Enter key */
-    0,			/* 29   - Control */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ':',	/* 39 */
- '\"', '~',   0,		/* Left shift */
- '|', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', '<', '>', '?',   0,				/* Right shift */
-  '*',
-    0,	/* Alt */
-  ' ',	/* Space bar */
-    0,	/* Caps lock */
-    0,	/* 59 - F1 key ... > */
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,	/* < ... F10 */
-    0,	/* 69 - Num lock*/
-    0,	/* Scroll Lock */
-    0,	/* Home key */
-    19,	/* Up Arrow */
-    0,	/* Page Up */
-  '-',
-    18,	/* Left Arrow */
+    0,  27, '!', '@', '#', '$', '%', '^', '&', '*',
+  '(', ')', '_', '+', '\b',
+  '\t',
+  'q', 'w', 'e', 'r',
+  't', 'y', 'u', 'i', 'o', 'p', '{', '}', '\n',
     0,
-    17,	/* Right Arrow */
+  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ':',
+ '\"', '~',   0,
+ '|', 'z', 'x', 'c', 'v', 'b', 'n',
+  'm', '<', '>', '?',   0,
+  '*',
+    0,
+  ' ',
+    0,
+    0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,
+    0,
+    0,
+    0,
+    19,
+    0,
+  '-',
+    18,
+    0,
+    17,
   '+',
-    0,	/* 79 - End key*/
-    20,	/* Down Arrow */
-    0,	/* Page Down */
-    0,	/* Insert Key */
-    0,	/* Delete Key */
+    0,
+    20,
+    0,
+    0,
+    0,
     0,   0,   0,
-    0,	/* F11 Key */
-    0,	/* F12 Key */
-    0,	/* All other keys are undefined */
+    0,
+    0,
+    0,
 };
 
 
@@ -118,21 +118,24 @@ char* keyboard_input(void) {
         if (status & 0x01) {
             uint8_t scan_code = inb(KEYBOARD_DATA_PORT);
 
-  
             if (scan_code & 0x80) continue;
-
 
             if (scan_code == 0x0E) {
                 if (buffer_index > 0) {
                     buffer_index--;
                     input_buffer[buffer_index] = '\0';
-                    printf("\b \b");
+                    
+                    if (xpos >= CHAR_WIDTH) {
+                        xpos -= CHAR_WIDTH;
+                    } else {
+                        xpos = 0;
+                    }
+                    drawchar_at_pos(' ', xpos, ypos, fg_color, bg_color);
                 }
                 continue;
             }
 
             char c = shift_pressed ? keymap_up[scan_code] : keymap[scan_code];
-
 
             if (c == '\n') {
                 input_buffer[buffer_index] = '\0';
@@ -140,7 +143,6 @@ char* keyboard_input(void) {
                 buffer_index = 0;
                 return input_buffer;
             }
-
 
             if (c && buffer_index < sizeof(input_buffer) - 1) {
                 input_buffer[buffer_index++] = c;
