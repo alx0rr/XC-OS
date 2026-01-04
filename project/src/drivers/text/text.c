@@ -11,7 +11,7 @@
 #define B_PART(color) ((color) & 0xFF)
 #define A_PART(color) (((color) >> 24) & 0xFF)
 
-#define FONT_SCALE 2
+#define FONT_SCALE 1.5
 
 uint16_t xpos = 0;
 uint16_t ypos = 0;

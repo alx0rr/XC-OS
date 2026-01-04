@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define CHAR_WIDTH 10
-#define CHAR_HEIGHT 24
+#define CHAR_WIDTH 16
+#define CHAR_HEIGHT 28
 
 void putchar(char c);
 void printf(const char *format, ...);
