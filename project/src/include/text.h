@@ -3,11 +3,12 @@
 
 #include <stdint.h>
 
-#define CHAR_WIDTH 16
-#define CHAR_HEIGHT 28
+#define CHAR_WIDTH 8
+#define CHAR_HEIGHT 14
+#define FONT_SCALE 1
+
 #define X_MARGIN 30
 #define Y_MARGIN 30
-#define FONT_SCALE 2
 
 void putchar(char c);
 void printf(const char *format, ...);
