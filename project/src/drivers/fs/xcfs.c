@@ -1,3 +1,4 @@
+// ToDo: XCFS_Edit
 #include "../../include/fs/xcfs.h"
 #include "../../include/storage/ata.h"
 #include "../../include/text.h"
@@ -77,8 +78,6 @@ static uint32_t xcfs_find_free_space(uint32_t size) {
 
 int xcfs_create(const char* name, uint32_t size) {
     if(!xcfs_ctx.initialized) return -1;
-    
-    // We don't force size to 512 anymore, but we ensure it occupies at least one sector in calculation
     
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
     if (entries_per_sector == 0) entries_per_sector = 1;
@@ -189,8 +188,6 @@ int xcfs_read(const char* name, uint8_t* buffer, uint32_t size) {
 
 int xcfs_write(const char* name, uint8_t* buffer, uint32_t size) {
     if(!xcfs_ctx.initialized) return -1;
-    
-    // Allow small writes, but they will still occupy at least one sector
     
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
     if (entries_per_sector == 0) entries_per_sector = 1;
