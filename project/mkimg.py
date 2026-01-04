@@ -8,7 +8,7 @@ XCFS_MAGIC = 0x58434653
 XCFS_VERSION = 1
 BOOTLOADER_END = 80
 XCFS_START = 100
-XCFS_DATA_START = 200
+XCFS_DATA_START = 248
 IMAGE_SIZE = 16 * 1024 * 1024
 
 def create_disk_image(output_path, stage1_path, stage2_path, kernel_path):
