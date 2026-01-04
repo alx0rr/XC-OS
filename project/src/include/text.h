@@ -2,9 +2,11 @@
 #define TEXT_H
 
 #include <stdint.h>
-
-#define CHAR_WIDTH 8
-#define CHAR_HEIGHT 14
+/* CHAR_WIDTH = orig_CHAR_WIDTH / now_SCALE * new_SCALE
+CHAR_HEIGHT = orig_CHAR_HEIGHT / now_SCALE * new_SCALE
+*/
+#define CHAR_WIDTH 12
+#define CHAR_HEIGHT 21
 #define FONT_SCALE 1
 
 #define X_MARGIN 30
