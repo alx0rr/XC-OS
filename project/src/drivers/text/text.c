@@ -1,6 +1,7 @@
 #include "../../include/graphics/framebuffer.h"
 #include "../../include/font.h"
 #include "../../lib/string.h"
+#include "../../include/text.h"
 
 #define RGB(r, g, b)       ((uint32_t)(((r) << 16) | ((g) << 8) | (b)))
 #define RGBA(r, g, b, a)   ((uint32_t)(((r) << 16) | ((g) << 8) | (b) | ((a) << 24)))
@@ -10,8 +11,6 @@
 #define B_PART(color) ((color) & 0xFF)
 #define A_PART(color) (((color) >> 24) & 0xFF)
 
-#define CHAR_WIDTH 16
-#define CHAR_HEIGHT 28
 #define FONT_SCALE 2
 
 uint16_t xpos = 0;
