@@ -10,12 +10,24 @@ load_xcos:
     call prnt
     
     mov ah, 0x02
-    mov al, 255
+    mov al, 127
     mov ch, 0
     mov cl, 17
     mov dh, 0
     mov dl, [boot_drive]
     mov bx, 0x1000
+    mov es, bx
+    xor bx, bx
+    int 0x13
+    jc xcos_load_error
+    
+    mov ah, 0x02
+    mov al, 128
+    mov ch, 0
+    mov cl, 144
+    mov dh, 0
+    mov dl, [boot_drive]
+    mov bx, 0x4FC0
     mov es, bx
     xor bx, bx
     int 0x13
