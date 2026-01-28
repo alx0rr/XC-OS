@@ -14,6 +14,7 @@ static uint32_t total_memory = 0;
 static uint32_t used_memory = 0;
 static uint8_t* bitmap = (uint8_t*)BITMAP_ADDR;
 static uint32_t bitmap_size = 0;
+static uint8_t* order_map = (uint8_t*)(BITMAP_ADDR + 0x100000);
 
 static inline void set_bit(uint32_t bit) {
     bitmap[bit / 8] |= (1 << (bit % 8));
@@ -25,6 +26,14 @@ static inline void clear_bit(uint32_t bit) {
 
 static inline uint8_t get_bit(uint32_t bit) {
     return (bitmap[bit / 8] >> (bit % 8)) & 1;
+}
+
+static inline void set_order(uint32_t block, uint8_t order) {
+    order_map[block] = order;
+}
+
+static inline uint8_t get_order_stored(uint32_t block) {
+    return order_map[block];
 }
 
 static uint32_t get_order(uint32_t size) {
@@ -115,6 +124,11 @@ void init_pmm() {
     for (uint32_t i = 0; i < bitmap_size; i++) {
         bitmap[i] = 0;
     }
+    
+    uint32_t order_map_size = HEAP_SIZE / MIN_BLOCK_SIZE;
+    for (uint32_t i = 0; i < order_map_size; i++) {
+        order_map[i] = 0;
+    }
 }
 
 memory_map_t get_mmap() {
@@ -160,6 +174,8 @@ void* pmm_malloc(uint32_t size) {
         set_bit(block_num + i);
     }
     
+    set_order(block_num, order);
+    
     used_memory += order_to_size(order);
     
     for (uint32_t i = 0; i < order_to_size(order); i++) {
@@ -178,15 +194,21 @@ void pmm_free(void* ptr) {
     
     if (!get_bit(block_num)) return;
     
-    uint32_t order = 0;
-    while (order < MAX_ORDER - 1 && get_bit(block_num + (1 << order))) {
-        order++;
+    uint32_t order = get_order_stored(block_num);
+    
+    if (order >= MAX_ORDER) {
+        order = 0;
+        while (order < MAX_ORDER - 1 && get_bit(block_num + (1 << order))) {
+            order++;
+        }
     }
     
     uint32_t blocks_count = 1 << order;
     for (uint32_t i = 0; i < blocks_count; i++) {
         clear_bit(block_num + i);
     }
+    
+    set_order(block_num, 0);
     
     used_memory -= order_to_size(order);
     

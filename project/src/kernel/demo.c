@@ -18,18 +18,28 @@ void memory_stress_test(void) {
     uint32_t min_block_size = 1 * 1024 * 1024;
     uint64_t desired_each = 50ULL * 1024ULL * 1024ULL;
 
-    uint32_t max_each = free_mem / blocks;
-
-    if (max_each < min_block_size) {
-        printf("{FG(255,0,0)}Not enough free RAM to run the stress test (need at least %u MB total free)\n",
-               (min_block_size * blocks) / (1024 * 1024));
+    uint64_t min_required_total = (uint64_t)min_block_size * blocks;
+    
+    if (free_mem < min_required_total) {
+        printf("{FG(255,0,0)}Not enough free RAM to run the stress test\n");
+        printf("{FG(255,0,0)}Required: %u MB, Available: %u MB\n",
+               (uint32_t)(min_required_total / (1024 * 1024)),
+               free_mem / (1024 * 1024));
         return;
     }
 
     uint32_t alloc_each = (uint32_t)desired_each;
-    if (alloc_each > max_each) {
-        alloc_each = max_each;
-        printf("{FG(255,200,0)}Adjusting block size to %u MB per block to fit free RAM\n",
+    uint64_t desired_total = desired_each * blocks;
+    
+    if (desired_total > free_mem) {
+        alloc_each = free_mem / blocks;
+        alloc_each = (alloc_each / (1024 * 1024)) * (1024 * 1024);
+        
+        if (alloc_each < min_block_size) {
+            alloc_each = min_block_size;
+        }
+        
+        printf("{FG(255,200,0)}Adjusting: can only allocate %u MB per block\n",
                alloc_each / (1024 * 1024));
     }
 
@@ -43,10 +53,12 @@ void memory_stress_test(void) {
         ptrs[i] = pmm_malloc(alloc_each);
         if (!ptrs[i]) {
             printf("{FG(255,0,0)}Allocation failed at block %d\n", i);
+            printf("{FG(255,100,0)}Free memory before this allocation: %u MB\n", 
+                   pmm_get_free_memory() / (1024 * 1024));
             break;
         }
         allocated++;
-        printf("{FG(0,255,0)}Block %d allocated\n", i);
+        printf("{FG(0,255,0)}Block %d allocated at 0x%x\n", i, (uint32_t)ptrs[i]);
     }
 
     printf("\n");
