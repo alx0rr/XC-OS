@@ -22,7 +22,7 @@ typedef struct {
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
     uint32_t int_no, err_code;
     uint32_t eip, cs, eflags, useresp, ss;
-} __attribute__((packed)) registers_t;
+} registers_t;
 
 #define IDT_FLAG_PRESENT (1 << 7)
 #define IDT_FLAG_DPL_0 (0 << 5)
