@@ -10,7 +10,7 @@ load_xcos:
     call prnt
     
     mov ah, 0x02
-    mov al, 64
+    mov al, 255
     mov ch, 0
     mov cl, 17
     mov dh, 0
@@ -59,7 +59,7 @@ protected_mode_start:
     mov esp, 0x90000
     mov esi, 0x10000
     mov edi, 0x100000
-    mov ecx, 8192
+    mov ecx, 32768
     rep movsd
     jmp 0x08:0x100000
 [bits 16]

@@ -1,10 +1,7 @@
-// ToDo: XCFS_Edit
 #include "../../include/fs/xcfs.h"
 #include "../../include/storage/ata.h"
 #include "../../include/text.h"
 #include "../../lib/string.h"
-
-#define XCFS_START_SECTOR 100
 
 static xcfs_context_t xcfs_ctx = {0};
 static xcfs_header_t xcfs_header = {0};
@@ -23,7 +20,7 @@ void xcfs_init(uint8_t drive) {
 
     if(xcfs_header.magic != XCFS_MAGIC) {
         printf("{FG(255,165,0)}XCFS not found, formatting...\n");
-        xcfs_format(drive, 16384);
+        xcfs_format(drive, 131072);
         return;
     }
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);

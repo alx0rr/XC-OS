@@ -6,10 +6,10 @@ import sys
 SECTOR_SIZE = 512
 XCFS_MAGIC = 0x58434653
 XCFS_VERSION = 1
-BOOTLOADER_END = 80
-XCFS_START = 100
-XCFS_DATA_START = 248
-IMAGE_SIZE = 16 * 1024 * 1024
+BOOTLOADER_END = 272
+XCFS_START = 512
+XCFS_DATA_START = 1024
+IMAGE_SIZE = 64 * 1024 * 1024
 
 def create_disk_image(output_path, stage1_path, stage2_path, kernel_path):
     print("Creating XC-OS disk image...")
@@ -34,8 +34,8 @@ def create_disk_image(output_path, stage1_path, stage2_path, kernel_path):
         print(f"ERROR: Stage 2 too large ({len(stage2)} > {SECTOR_SIZE * 15})")
         sys.exit(1)
     
-    if len(kernel) > SECTOR_SIZE * 64:
-        print(f"ERROR: Kernel too large ({len(kernel)} > {SECTOR_SIZE * 64})")
+    if len(kernel) > SECTOR_SIZE * 255:
+        print(f"ERROR: Kernel too large ({len(kernel)} > {SECTOR_SIZE * 255})")
         sys.exit(1)
     
     image = bytearray(IMAGE_SIZE)

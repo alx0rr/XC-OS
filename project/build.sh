@@ -6,7 +6,12 @@ drivers_src="$src_dir/drivers"
 includes_src="$src_dir/include"
 lib_src="$src_dir/lib"
 
+IMAGE_SIZE_MB=64
+KERNEL_SIZE_SECTORS=255
+
 echo "Building XC-OS..."
+echo "Image size: ${IMAGE_SIZE_MB}MB"
+echo "Kernel size: ${KERNEL_SIZE_SECTORS} sectors ($(($KERNEL_SIZE_SECTORS * 512 / 1024))KB)"
 
 echo "Cleaning..."
 if [ -d "$build_dir" ]; then
@@ -127,12 +132,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-truncate -s 32768 "$build_dir/kernel.bin"
+KERNEL_SIZE=$(($KERNEL_SIZE_SECTORS * 512))
+truncate -s $KERNEL_SIZE "$build_dir/kernel.bin"
 
 echo "Creating OS image..."
 cat "$build_dir/stage1.bin" "$build_dir/stage2.bin" "$build_dir/kernel.bin" > "$build_dir/xcos.img"
 
-truncate -s 16777216 "$build_dir/xcos.img"
+IMAGE_SIZE=$(($IMAGE_SIZE_MB * 1024 * 1024))
+truncate -s $IMAGE_SIZE "$build_dir/xcos.img"
 
 SIZE_STAGE1=$(stat -c%s "$build_dir/stage1.bin" 2>/dev/null || stat -f%z "$build_dir/stage1.bin" 2>/dev/null)
 SIZE_STAGE2=$(stat -c%s "$build_dir/stage2.bin" 2>/dev/null || stat -f%z "$build_dir/stage2.bin" 2>/dev/null)
@@ -144,6 +151,6 @@ echo "Build completed successfully!"
 echo "=========================="
 echo "Stage 1: $SIZE_STAGE1 bytes"
 echo "Stage 2: $SIZE_STAGE2 bytes"
-echo "Kernel:  $SIZE_KERNEL bytes"
-echo "Image:   $SIZE_TOTAL bytes (16 MB)"
+echo "Kernel:  $SIZE_KERNEL bytes ($(($SIZE_KERNEL / 1024))KB)"
+echo "Image:   $SIZE_TOTAL bytes (${IMAGE_SIZE_MB} MB)"
 echo "=========================="

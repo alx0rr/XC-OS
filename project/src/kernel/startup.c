@@ -5,6 +5,7 @@
 #include "../include/interrupts/idt.h"
 #include "../include/storage/ata.h"
 #include "../include/fs/xcfs.h"
+#include "../include/input/keyboard.h"
 
 void startup() {
     vbe_init();
@@ -22,6 +23,9 @@ void startup() {
     
     idt_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} IDT initialized\n");
+    
+    keyboard_init();
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Keyboard initialized\n");
     
     ata_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} ATA Driver initialized\n");
