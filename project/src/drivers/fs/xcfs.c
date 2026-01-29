@@ -329,6 +329,7 @@ int xcfs_write(const char* path, uint8_t* buffer, uint32_t size) {
 
 int xcfs_readdir(const char* path, xcfs_dirent_t* entries, uint32_t max_entries) {
     if (!xcfs_ctx.initialized) return -1;
+    if (!entries || max_entries == 0) return -1;
     
     char normalized[XCFS_MAX_PATH];
     xcfs_normalize_path(path, normalized);
@@ -339,13 +340,19 @@ int xcfs_readdir(const char* path, xcfs_dirent_t* entries, uint32_t max_entries)
     }
     
     uint32_t count = 0;
-    for (uint32_t i = 0; i < xcfs_header.file_count && count < max_entries; i++) {
+    uint32_t safe_limit = xcfs_header.file_count;
+    if (safe_limit > XCFS_MAX_FILES) safe_limit = XCFS_MAX_FILES;
+    
+    for (uint32_t i = 0; i < safe_limit && count < max_entries; i++) {
+        if (xcfs_entries[i].path[0] == '\0') continue;
+        
         if (dir_len == 0) {
             if (xcfs_entries[i].path[0] == '/' && strchr(xcfs_entries[i].path + 1, '/') == 0) {
                 const char* name = xcfs_entries[i].path + 1;
                 if (strlen(name) == 0) continue;
                 
-                strcpy(entries[count].name, name);
+                strncpy(entries[count].name, name, 63);
+                entries[count].name[63] = '\0';
                 entries[count].type = xcfs_entries[i].type;
                 entries[count].flags = xcfs_entries[i].flags;
                 entries[count].size = xcfs_entries[i].size;
@@ -357,7 +364,8 @@ int xcfs_readdir(const char* path, xcfs_dirent_t* entries, uint32_t max_entries)
                 
                 const char* subpath = xcfs_entries[i].path + dir_len + 1;
                 if (strchr(subpath, '/') == 0 && strlen(subpath) > 0) {
-                    strcpy(entries[count].name, subpath);
+                    strncpy(entries[count].name, subpath, 63);
+                    entries[count].name[63] = '\0';
                     entries[count].type = xcfs_entries[i].type;
                     entries[count].flags = xcfs_entries[i].flags;
                     entries[count].size = xcfs_entries[i].size;
@@ -414,7 +422,10 @@ const char* xcfs_getcwd(void) {
 }
 
 int xcfs_list(const char* path) {
-    if (!xcfs_ctx.initialized) return -1;
+    if (!xcfs_ctx.initialized) {
+        printf("{FG(255,0,0)}XCFS not initialized\n");
+        return -1;
+    }
     
     char normalized[XCFS_MAX_PATH];
     if (path) {
@@ -423,22 +434,67 @@ int xcfs_list(const char* path) {
         strcpy(normalized, xcfs_ctx.cwd);
     }
     
-    xcfs_dirent_t entries[256];
-    int count = xcfs_readdir(normalized, entries, 256);
+    if (xcfs_header.file_count == 0) {
+        printf("{FG(0,255,255)}%s:\n{FG(255,165,0)}Empty filesystem\n", normalized);
+        return 0;
+    }
     
-    if (count < 0) return -1;
+    if (xcfs_header.file_count > XCFS_MAX_FILES) {
+        printf("{FG(255,0,0)}Corrupted filesystem (file_count=%u)\n", xcfs_header.file_count);
+        return -1;
+    }
+    
+    xcfs_dirent_t entries[32];
+    int count = xcfs_readdir(normalized, entries, 32);
+    
+    if (count < 0) {
+        printf("{FG(255,0,0)}Error reading directory\n");
+        return -1;
+    }
+    
+    if (count == 0) {
+        printf("{FG(0,255,255)}%s:\n{FG(255,165,0)}Empty\n", normalized);
+        return 0;
+    }
     
     printf("{FG(0,255,255)}=== %s ===\n", normalized);
+    
+    uint32_t dirs = 0, files = 0, total_size = 0;
+    
     for (int i = 0; i < count; i++) {
         if (entries[i].type == XCFS_TYPE_DIR) {
             printf("{FG(100,200,255)}[DIR]{FG(255,255,255)}  %s\n", entries[i].name);
+            dirs++;
         } else {
             const char* color = (entries[i].flags & XCFS_FLAG_EXECUTABLE) ? 
                 "{FG(0,255,0)}" : "{FG(255,255,255)}";
-            printf("%s%s{FG(255,255,255)} (%u bytes)\n", color, entries[i].name, entries[i].size);
+            
+            if (entries[i].size >= 1024) {
+                printf("%s%-20s{FG(150,150,150)} %u KB\n", 
+                    color, entries[i].name, entries[i].size / 1024);
+            } else {
+                printf("%s%-20s{FG(150,150,150)} %u B\n", 
+                    color, entries[i].name, entries[i].size);
+            }
+            
+            files++;
+            total_size += entries[i].size;
         }
     }
-    printf("{FG(0,255,0)}Total: %d entries\n", count);
+    
+    printf("{FG(0,255,0)}");
+    if (dirs > 0) printf("%u dirs ", dirs);
+    if (files > 0) printf("%u files", files);
+    if (total_size > 0) {
+        if (total_size >= 1024*1024) {
+            printf(" (%u MB)", total_size / (1024*1024));
+        } else if (total_size >= 1024) {
+            printf(" (%u KB)", total_size / 1024);
+        } else {
+            printf(" (%u B)", total_size);
+        }
+    }
+    printf("\n");
     
     return 0;
 }
