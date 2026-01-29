@@ -287,54 +287,22 @@ void init_pmm() {
         }
     }
     
-    actual_heap_size = (max_end > HEAP_START) ? (max_end - HEAP_START) : 0;
-    
-    if (actual_heap_size == 0) {
-        printf("No usable memory regions found, using fallback...\n");
-        
-        uint32_t detected_memory = detect_memory_advanced();
-        
-        if (detected_memory > 0x100000) {
-            actual_heap_size = detected_memory - 0x100000;
-            printf("Advanced detection: %u MB\n", actual_heap_size / (1024*1024));
-        } else {
-            actual_heap_size = 850 * 1024 * 1024;
-            printf("Using hardcoded fallback: 850 MB\n");
-        }
-        
-        total_memory = actual_heap_size;
-        
-        uint32_t start_addr = HEAP_START;
-        uint32_t end_addr = HEAP_START + actual_heap_size;
-        
-        start_addr = (start_addr + MIN_BLOCK_SIZE - 1) & ~(MIN_BLOCK_SIZE - 1);
-        end_addr = end_addr & ~(MIN_BLOCK_SIZE - 1);
-        
-        while (start_addr < end_addr) {
-            uint32_t size = end_addr - start_addr;
-            uint32_t order = MAX_ORDER - 1;
-            
-            while (order > 0 && order_to_size(order) > size) {
-                order--;
-            }
-            
-            while (order > 0 && !is_aligned(start_addr, order_to_size(order))) {
-                order--;
-            }
-            
-            uint32_t block_size = order_to_size(order);
-            if (block_size == 0 || block_size > size) break;
-            
-            add_block_to_list(order, (void*)start_addr);
-            start_addr += block_size;
-        }
+    if (total_usable > 0) {
+        actual_heap_size = (max_end > HEAP_START) ? (max_end - HEAP_START) : 0;
+    } else {
+        printf("[ERROR] No usable memory regions from E820!\n");
+        printf("[ERROR] Check QEMU/BIOS E820 implementation\n");
+        actual_heap_size = 0;
+        total_memory = 0;
     }
     
-    max_blocks = (actual_heap_size + MIN_BLOCK_SIZE - 1) / MIN_BLOCK_SIZE;
+    max_blocks = actual_heap_size > 0 ? ((actual_heap_size + MIN_BLOCK_SIZE - 1) / MIN_BLOCK_SIZE) : 0;
     bitmap_size = (max_blocks + 7) / 8;
     
-    fast_memset(bitmap, 0, bitmap_size);
-    fast_memset(order_map, 0, max_blocks);
+    if (max_blocks > 0) {
+        fast_memset(bitmap, 0, bitmap_size);
+        fast_memset(order_map, 0, max_blocks);
+    }
     
     printf("PMM initialized: total_memory=%uMB, max_blocks=%u\n", 
            total_memory / (1024*1024), max_blocks);
