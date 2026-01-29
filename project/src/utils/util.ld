@@ -3,11 +3,11 @@ ENTRY(main)
 
 SECTIONS
 {
-    . = 0x0;
+    . = 0x400000;
     
     .header : {
         LONG(0x584F5845);
-        LONG(_start);
+        LONG(_start - 0x400000);
         LONG(_etext - _start);
         LONG(_edata - _etext);
         LONG(_end - _edata);

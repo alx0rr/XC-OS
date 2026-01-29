@@ -4,7 +4,7 @@
 #include "../../include/text.h"
 #include "../../lib/string.h"
 
-#define EXEC_BASE_ADDR 0x400000
+#define EXEC_BASE_ADDR ((uint8_t*)0x400000)
 
 int exec_find_in_path(const char* name, char* fullpath) {
     if (!name || !fullpath) return -1;
@@ -30,7 +30,6 @@ int exec_load(const char* path, int argc, char** argv) {
     
     char fullpath[256];
     if (exec_find_in_path(path, fullpath) < 0) {
-        printf("{FG(255,0,0)}exec: %s: not found\n", path);
         return -1;
     }
     
@@ -65,12 +64,7 @@ int exec_load(const char* path, int argc, char** argv) {
     }
     
     uint32_t total_size = header->code_size + header->data_size + header->bss_size;
-    uint8_t* prog_mem = (uint8_t*)pmm_malloc(total_size);
-    if (!prog_mem) {
-        pmm_free(binary);
-        printf("{FG(255,0,0)}exec: out of memory\n");
-        return -1;
-    }
+    uint8_t* prog_mem = EXEC_BASE_ADDR;
     
     uint8_t* code_start = binary + sizeof(exec_header_t);
     memcpy(prog_mem, code_start, header->code_size + header->data_size);
@@ -80,7 +74,6 @@ int exec_load(const char* path, int argc, char** argv) {
     
     int ret = entry(argc, argv);
     
-    pmm_free(prog_mem);
     pmm_free(binary);
     
     return ret;
