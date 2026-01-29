@@ -55,8 +55,18 @@ void vmm_init() {
         kernel_page_tables_phys[i] = 0;
     }
     
-    uint32_t identity_end = 0x1000000;
+    // Identity map first 256MB (covers kernel, stack, VBE info, etc)
+    uint32_t identity_end = 0x10000000; // 256MB
     for (uint32_t addr = 0; addr < identity_end; addr += PAGE_SIZE) {
+        vmm_map_page(addr, addr, PAGE_PRESENT | PAGE_WRITE);
+    }
+    
+    // Also identity map high memory region where framebuffer might be located
+    // Common framebuffer locations: 0xE0000000+ (QEMU/VirtualBox)
+    // Map 32MB starting from 0xE0000000 (enough for most framebuffers)
+    uint32_t fb_start = 0xE0000000;
+    uint32_t fb_end = 0xE2000000; // 32MB instead of 256MB
+    for (uint32_t addr = fb_start; addr < fb_end; addr += PAGE_SIZE) {
         vmm_map_page(addr, addr, PAGE_PRESENT | PAGE_WRITE);
     }
     
@@ -72,9 +82,15 @@ void vmm_enable_paging() {
     }
     
     uint32_t dir_phys = (uint32_t)kernel_directory;
+    
+    // Load page directory and enable paging
     load_page_directory(dir_phys);
     enable_paging_asm();
     
+    // Flush TLB to ensure all mappings are active
+    __asm__ volatile("mov %%cr3, %%eax; mov %%eax, %%cr3" ::: "eax");
+    
+    // Now it's safe to print - framebuffer should be identity mapped
     printf("{FG(0,255,0)}Paging enabled at 0x%x\n", dir_phys);
 }
 
