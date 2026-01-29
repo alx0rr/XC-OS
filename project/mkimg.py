@@ -5,10 +5,10 @@ import sys
 
 SECTOR_SIZE = 512
 XCFS_MAGIC = 0x58434653
-XCFS_VERSION = 1
+XCFS_VERSION = 2
 BOOTLOADER_END = 272
 XCFS_START = 512
-XCFS_DATA_START = 1024
+XCFS_DATA_START = 2048
 IMAGE_SIZE = 64 * 1024 * 1024
 
 def create_disk_image(output_path, stage1_path, stage2_path, kernel_path):

@@ -132,10 +132,11 @@ void* memmove(void* dest, const void* src, size_t n) {
 }
 
 
-void* memset(char* dest, char value, size_t size) {
+void* memset(void* dest, int value, size_t size) {
     unsigned char* d = (unsigned char*)dest;
+    unsigned char v = (unsigned char)value;
     while (size--) {
-        *d = (unsigned char)value;
+        *d = v;
         d++;
     }
     return dest;

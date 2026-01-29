@@ -106,6 +106,29 @@ IMAGE_SIZE=$(($IMAGE_SIZE_MB * 1024 * 1024))
 truncate -s $IMAGE_SIZE "$build_dir/xcos.img"
 
 echo ""
+echo "Creating VBE stubs for utilities..."
+cat > "$utils_src/vbe_stubs.c" << 'VBESTUBS'
+#include <stdint.h>
+
+uint8_t vbe_mode_info_data[256] = {0};
+
+void* vbe_get_framebuffer(void) {
+    return (void*)0xE0000000;
+}
+
+uint16_t vbe_get_width(void) {
+    return 1024;
+}
+
+uint16_t vbe_get_height(void) {
+    return 768;
+}
+
+void* get_vbe_struct(void) {
+    return (void*)vbe_mode_info_data;
+}
+VBESTUBS
+
 echo "Building utilities..."
 if [ -d "$utils_src" ]; then
     UTILS=(uptime banner tree stat)
@@ -115,10 +138,13 @@ if [ -d "$utils_src" ]; then
             gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector \
                 -I$includes_src -c "$utils_src/${util}.c" -o "$build_dir/utils/${util}.o"
             
+            gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector \
+                -I$includes_src -c "$utils_src/vbe_stubs.c" -o "$build_dir/utils/vbe_stubs.o"
+            
             ld -m elf_i386 -T "$utils_src/util.ld" -o "$build_dir/utils/${util}.bin" \
                 "$build_dir/utils/${util}.o" \
                 "$build_dir/text.o" "$build_dir/string.o" "$build_dir/time.o" \
-                "$build_dir/xcfs.o" "$build_dir/framebuffer.o" "$build_dir/ata.o"
+                "$build_dir/xcfs.o" "$build_dir/framebuffer.o" "$build_dir/utils/vbe_stubs.o" "$build_dir/ata.o"
             
             [ $? -eq 0 ] && echo "    OK: ${util}.bin"
         fi
@@ -142,3 +168,4 @@ echo "Stage 2: $SIZE_STAGE2 bytes"
 echo "Kernel:  $SIZE_KERNEL bytes ($(($SIZE_KERNEL / 1024))KB)"
 echo "Image:   $SIZE_TOTAL bytes (${IMAGE_SIZE_MB} MB)"
 echo "=========================="
+

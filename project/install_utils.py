@@ -15,6 +15,65 @@ XCFS_TYPE_DIR = 0x02
 XCFS_FLAG_PROTECTED = 0x04
 XCFS_FLAG_EXECUTABLE = 0x08
 
+def format_xcfs(image_path):
+    print(f"Formatting XCFS v{XCFS_VERSION}...")
+    
+    with open(image_path, 'r+b') as f:
+        f.seek(0, 2)
+        total_size = f.tell()
+        total_sectors = total_size // SECTOR_SIZE
+        
+        header = struct.pack('<IIII', XCFS_MAGIC, XCFS_VERSION, total_sectors, 0)
+        header += b'\x00' * (SECTOR_SIZE - len(header))
+        
+        f.seek(XCFS_START * SECTOR_SIZE)
+        f.write(header)
+        
+        for i in range(XCFS_START + 1, XCFS_DATA_START):
+            f.seek(i * SECTOR_SIZE)
+            f.write(b'\x00' * SECTOR_SIZE)
+
+def add_directory(image_path, dirpath):
+    with open(image_path, 'r+b') as f:
+        f.seek(XCFS_START * SECTOR_SIZE)
+        header = f.read(16)
+        magic, version, total_sectors, file_count = struct.unpack('<IIII', header)
+        
+        if magic != XCFS_MAGIC:
+            return False
+        
+        if file_count >= 256:
+            return False
+        
+        dirpath_bytes = dirpath.encode('ascii')
+        if len(dirpath_bytes) > XCFS_MAX_PATH:
+            dirpath_bytes = dirpath_bytes[:XCFS_MAX_PATH]
+        
+        entry = bytearray(512)
+        entry[0:len(dirpath_bytes)] = dirpath_bytes
+        entry[XCFS_MAX_PATH:XCFS_MAX_PATH + 4] = struct.pack('<I', 0)
+        entry[XCFS_MAX_PATH + 4:XCFS_MAX_PATH + 8] = struct.pack('<I', 0)
+        entry[XCFS_MAX_PATH + 8:XCFS_MAX_PATH + 12] = struct.pack('<I', 0)
+        entry[XCFS_MAX_PATH + 12] = XCFS_TYPE_DIR
+        entry[XCFS_MAX_PATH + 13] = 0
+        
+        entries_per_sector = SECTOR_SIZE // 512
+        if entries_per_sector == 0:
+            entries_per_sector = 1
+        
+        sector_idx = file_count // entries_per_sector
+        entry_idx = file_count % entries_per_sector
+        entry_offset = (XCFS_START + 1 + sector_idx) * SECTOR_SIZE + entry_idx * 512
+        
+        f.seek(entry_offset)
+        f.write(entry)
+        
+        file_count += 1
+        f.seek(XCFS_START * SECTOR_SIZE + 12)
+        f.write(struct.pack('<I', file_count))
+        
+        return True
+
 def read_xcfs_header(image):
     header_data = image[XCFS_START * SECTOR_SIZE:(XCFS_START + 1) * SECTOR_SIZE]
     magic, version, total_sectors, file_count = struct.unpack('<IIII', header_data[:16])
@@ -70,7 +129,7 @@ def find_free_sector(entries):
     return max_sector
 
 def install_binary(image_path, bin_path, dest_path):
-    print(f"Installing {bin_path} to {dest_path}...")
+    print(f"Installing {bin_path} to {dest_path}...", end=" ")
     
     with open(image_path, 'r+b') as img:
         image_data = bytearray(img.read())
@@ -84,7 +143,6 @@ def install_binary(image_path, bin_path, dest_path):
         
         for entry in entries:
             if entry['path'] == dest_path:
-                print(f"  Removing existing {dest_path}")
                 entries.remove(entry)
                 header['file_count'] -= 1
                 break
@@ -144,7 +202,7 @@ def install_binary(image_path, bin_path, dest_path):
         img.seek(0)
         img.write(image_data)
         
-        print(f"  OK: {dest_path} ({bin_size} bytes, sector {start_sector})")
+        print(f"OK")
         return True
 
 def main():
@@ -159,25 +217,30 @@ def main():
         print(f"ERROR: Image {image_path} not found")
         sys.exit(1)
     
+    format_xcfs(image_path)
+    add_directory(image_path, "/bin")
+    add_directory(image_path, "/etc")
+    add_directory(image_path, "/home")
+    add_directory(image_path, "/tmp")
+    
     if not os.path.exists(utils_dir):
-        print(f"ERROR: Utils directory {utils_dir} not found")
-        sys.exit(1)
+        print(f"No utils directory")
+        sys.exit(0)
     
     utils = []
     for filename in os.listdir(utils_dir):
         if filename.endswith('.bin'):
             utils.append(filename[:-4])
     
-    print(f"Installing {len(utils)} utilities to {image_path}...")
-    print()
+    print(f"\nInstalling {len(utils)} utilities...")
     
     for util in utils:
         bin_path = os.path.join(utils_dir, f"{util}.bin")
         dest_path = f"/bin/{util}"
         install_binary(image_path, bin_path, dest_path)
     
-    print()
-    print(f"Installation complete: {len(utils)} utilities installed")
+    print(f"\nInstallation complete: {len(utils)} utilities installed")
 
 if __name__ == '__main__':
     main()
+
