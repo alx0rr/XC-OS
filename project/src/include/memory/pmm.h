@@ -15,10 +15,11 @@
 #define MMAP_TYPE_ACPI_NVS 4
 #define MMAP_TYPE_BAD 5
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint64_t base_addr;
     uint64_t length;
     uint32_t type;
+    uint32_t extended_attributes;
 } mmap_entry_t;
 
 typedef struct {
