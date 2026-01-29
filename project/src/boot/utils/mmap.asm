@@ -32,30 +32,61 @@ get_memory_map:
     mov ecx, 24
     mov dword [es:di+20], 1
     int 0x15
-    jc .try_e801
+    jc .e820_failed
     
     cmp eax, 0x534D4150
-    jne .try_e801
+    jne .e820_failed
 
     cmp ecx, 20
-    jb .try_e801
+    jb .e820_failed
 
     mov ax, [COUNT_ADDR]
     inc ax
     cmp ax, MAX_ENTRIES
-    jae .check_results
+    jae .validate_e820
     mov [COUNT_ADDR], ax
     add di, 24
 
     test ebx, ebx
     jnz .e820_loop
-    jmp .check_results
+
+.validate_e820:
+    mov cx, [COUNT_ADDR]
+    test cx, cx
+    jz .e820_failed
+    
+    xor si, si
+    mov di, MMAP_ADDR
+
+.validate_loop:
+    mov eax, [di]
+    mov edx, [di+4]
+    mov ebx, [di+16]
+    
+    cmp ebx, 1
+    jne .validate_next
+    
+    cmp edx, 0
+    ja .found_extended
+    cmp eax, 0x100000
+    jae .found_extended
+
+.validate_next:
+    add di, 24
+    inc si
+    cmp si, cx
+    jb .validate_loop
+    
+    jmp .e820_failed
+
+.found_extended:
+    jmp .finalize
+
+.e820_failed:
+    mov word [COUNT_ADDR], 0
+    mov di, MMAP_ADDR
 
 .try_e801:
-    mov ax, [COUNT_ADDR]
-    test ax, ax
-    jnz .check_results
-    
     xor cx, cx
     xor dx, dx
     mov ax, 0xE801
@@ -107,17 +138,13 @@ get_memory_map:
     mov dword [di+20], 0
     
     mov word [COUNT_ADDR], 3
-    jmp .check_results
+    jmp .finalize
 
 .e801_done:
     mov word [COUNT_ADDR], 2
-    jmp .check_results
+    jmp .finalize
 
 .try_88:
-    mov ax, [COUNT_ADDR]
-    test ax, ax
-    jnz .check_results
-    
     clc
     mov ah, 0x88
     int 0x15
@@ -146,7 +173,7 @@ get_memory_map:
     mov dword [di+20], 0
     
     mov word [COUNT_ADDR], 2
-    jmp .check_results
+    jmp .finalize
 
 .try_cmos:
     mov al, 0x17
@@ -183,7 +210,7 @@ get_memory_map:
     mov dword [di+20], 0
     
     mov word [COUNT_ADDR], 2
-    jmp .check_results
+    jmp .finalize
 
 .assume_memory:
     mov di, MMAP_ADDR
@@ -206,7 +233,7 @@ get_memory_map:
     
     mov word [COUNT_ADDR], 2
 
-.check_results:
+.finalize:
     mov ax, [COUNT_ADDR]
     mov word [COUNT_ADDR], ax
     mov word [COUNT_ADDR+2], 0
