@@ -375,17 +375,15 @@ void* pmm_malloc(uint32_t size) {
         __sync_fetch_and_add(&used_memory, alloc_size);
     }
     
+    // Clear allocated memory to prevent garbage data
+    fast_memset(block, 0, alloc_size);
+    
     return block;
 }
 
 void* pmm_calloc(uint32_t size) {
-    void* ptr = pmm_malloc(size);
-    if (ptr) {
-        uint32_t order = get_order(size);
-        uint32_t alloc_size = order_to_size(order);
-        fast_memset(ptr, 0, alloc_size);
-    }
-    return ptr;
+    // pmm_malloc already clears the memory, so just return it
+    return pmm_malloc(size);
 }
 
 void pmm_free(void* ptr) {

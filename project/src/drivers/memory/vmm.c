@@ -142,6 +142,9 @@ void* vmm_alloc_pages(uint32_t count, uint32_t flags) {
         
         uint32_t v = start_virt + (i * PAGE_SIZE);
         vmm_map_page(v, (uint32_t)phys, flags | PAGE_PRESENT | PAGE_WRITE);
+        
+        // Clear the newly mapped virtual memory
+        memset((void*)v, 0, PAGE_SIZE);
     }
     
     next_virt += (count * PAGE_SIZE);
