@@ -196,7 +196,7 @@ void cmd_mv(int argc, char** argv) {
 }
 
 void cmd_uname() {
-    printf("XC-OS v2.0 i386 (XCFS v2)\n");
+    printf("XC-OS v0.3 i386 (XCFS v2)\n");
 }
 
 void cmd_free() {
@@ -239,7 +239,7 @@ void help() {
 
 void kernel_main() {
     startup();
-    printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS v2.0{FG(0,255,0)}\n");
+    printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS v0.3{FG(0,255,0)}\n");
     printf("\nType '{FG(255,255,0)}help{FG(255,255,255)}' for available commands\n\n");
     
     while (1) {
@@ -310,9 +310,6 @@ void kernel_main() {
         }
         else if (strcmp(cmd, "stat") == 0) {
             cmd_stat(argc, args);
-        }
-        else if (strcmp(cmd, "tree") == 0) {
-            cmd_tree(argc, args);
         }
         else if (strcmp(cmd, "uptime") == 0) {
             cmd_uptime();
