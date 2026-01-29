@@ -59,6 +59,7 @@ fi
 
 echo "Compiling Memory Manager..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/memory/pmm.c -o $build_dir/pmm.o
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$src_dir/include -c $drivers_src/memory/detect.c -o $build_dir/detect.o
 if [ $? -ne 0 ]; then
     echo "Error compiling Memory Manager"
     exit 1
@@ -123,7 +124,7 @@ fi
 echo "Linking Kernel..."
 ld -m elf_i386 -T "$src_dir/linker.ld" -o "$build_dir/kernel.bin" \
     "$build_dir/boot.o" "$build_dir/kernel.o" "$build_dir/vbe.o" \
-    "$build_dir/pmm.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
+    "$build_dir/pmm.o" "$build_dir/detect.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
     "$build_dir/string.o" "$build_dir/keyboard.o" "$build_dir/time.o" \
     "$build_dir/random.o" "$build_dir/cpu.o" "$build_dir/idt.o" \
     "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o"

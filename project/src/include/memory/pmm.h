@@ -36,5 +36,6 @@ void pmm_defragment();
 uint32_t pmm_get_total_memory();
 uint32_t pmm_get_free_memory();
 uint32_t pmm_get_used_memory();
+uint32_t detect_memory_advanced();
 
 #endif

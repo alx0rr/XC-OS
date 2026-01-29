@@ -206,6 +206,8 @@ void init_pmm() {
     mmap.count = *(uint32_t*)MMAP_COUNT_ADDR;
     mmap.entries = (mmap_entry_t*)MMAP_ADDR;
     
+    printf("PMM Init: mmap.count = %u\n", mmap.count);
+    
     for (uint32_t i = 0; i < MAX_ORDER; i++) {
         free_lists[i] = 0;
         list_locks[i].lock = 0;
@@ -219,6 +221,14 @@ void init_pmm() {
     uint32_t total_usable = 0;
     
     for (uint32_t i = 0; i < mmap.count; i++) {
+        printf("Region %u: base=0x%x%x len=0x%x%x type=%u\n", 
+               i,
+               (uint32_t)(mmap.entries[i].base_addr >> 32),
+               (uint32_t)(mmap.entries[i].base_addr),
+               (uint32_t)(mmap.entries[i].length >> 32),
+               (uint32_t)(mmap.entries[i].length),
+               mmap.entries[i].type);
+               
         if (mmap.entries[i].type == MMAP_TYPE_USABLE) {
             uint64_t base = mmap.entries[i].base_addr;
             uint64_t length = mmap.entries[i].length;
@@ -280,7 +290,18 @@ void init_pmm() {
     actual_heap_size = (max_end > HEAP_START) ? (max_end - HEAP_START) : 0;
     
     if (actual_heap_size == 0) {
-        actual_heap_size = 128 * 1024 * 1024;
+        printf("No usable memory regions found, using fallback...\n");
+        
+        uint32_t detected_memory = detect_memory_advanced();
+        
+        if (detected_memory > 0x100000) {
+            actual_heap_size = detected_memory - 0x100000;
+            printf("Advanced detection: %u MB\n", actual_heap_size / (1024*1024));
+        } else {
+            actual_heap_size = 850 * 1024 * 1024;
+            printf("Using hardcoded fallback: 850 MB\n");
+        }
+        
         total_memory = actual_heap_size;
         
         uint32_t start_addr = HEAP_START;
@@ -314,6 +335,9 @@ void init_pmm() {
     
     fast_memset(bitmap, 0, bitmap_size);
     fast_memset(order_map, 0, max_blocks);
+    
+    printf("PMM initialized: total_memory=%uMB, max_blocks=%u\n", 
+           total_memory / (1024*1024), max_blocks);
 }
 
 memory_map_t get_mmap() {
@@ -400,8 +424,7 @@ void pmm_free(void* ptr) {
     if (!ptr) return;
     
     uint32_t addr = (uint32_t)ptr;
- 
-   if (addr < HEAP_START || addr >= HEAP_START + actual_heap_size) {
+    if (addr < HEAP_START || addr >= HEAP_START + actual_heap_size) {
         return;
     }
     
