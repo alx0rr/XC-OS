@@ -36,26 +36,6 @@ static inline uint8_t get_order_stored(uint32_t block) {
     return order_map[block];
 }
 
-static inline void fast_memset(void* ptr, uint32_t value, uint32_t size) {
-    uint32_t dwords = size / 4;
-    uint32_t remainder = size % 4;
-    
-    __asm__ volatile(
-        "cld\n\t"
-        "rep stosl"
-        : "+D"(ptr), "+c"(dwords)
-        : "a"(value)
-        : "memory"
-    );
-    
-    if (remainder) {
-        uint8_t* byte_ptr = (uint8_t*)ptr;
-        while (remainder--) {
-            *byte_ptr++ = (uint8_t)value;
-        }
-    }
-}
-
 static uint32_t get_order(uint32_t size) {
     uint32_t order = 0;
     uint32_t block_size = MIN_BLOCK_SIZE;
@@ -88,6 +68,9 @@ void init_pmm() {
     mmap.count = *(uint32_t*)MMAP_COUNT_ADDR;
     mmap.entries = (mmap_entry_t*)MMAP_ADDR;
     
+    printf("{FG(255,200,100)}[DEBUG] Memory map entries: %u\n", mmap.count);
+    printf("{FG(255,200,100)}[DEBUG] HEAP_START=0x%x HEAP_SIZE=0x%x\n", HEAP_START, HEAP_SIZE);
+    
     for (uint32_t i = 0; i < MAX_ORDER; i++) {
         free_lists[i] = 0;
     }
@@ -95,56 +78,138 @@ void init_pmm() {
     total_memory = 0;
     used_memory = 0;
     
-    for (uint32_t i = 0; i < mmap.count; i++) {
-        if (mmap.entries[i].type == MMAP_TYPE_USABLE) {
-            uint64_t base = mmap.entries[i].base_addr;
-            uint64_t length = mmap.entries[i].length;
+    if (mmap.count == 0) {
+        printf("{FG(255,0,0)}[ERROR] No memory map entries found!\n");
+        printf("{FG(255,200,0)}[INFO] Using fallback: assuming 64MB RAM\n");
+        
+        uint32_t fallback_start = HEAP_START;
+        uint32_t fallback_end = HEAP_START + (64 * 1024 * 1024);
+        
+        if (fallback_end > HEAP_START + HEAP_SIZE) {
+            fallback_end = HEAP_START + HEAP_SIZE;
+        }
+        
+        total_memory = fallback_end - fallback_start;
+        
+        uint32_t start_addr = fallback_start;
+        uint32_t end_addr = fallback_end;
+        
+        start_addr = (start_addr + MIN_BLOCK_SIZE - 1) & ~(MIN_BLOCK_SIZE - 1);
+        end_addr = end_addr & ~(MIN_BLOCK_SIZE - 1);
+        
+        while (start_addr < end_addr) {
+            uint32_t size = end_addr - start_addr;
+            uint32_t order = MAX_ORDER - 1;
             
-            if (base < HEAP_START) {
-                if (base + length <= HEAP_START) continue;
-                length -= (HEAP_START - base);
-                base = HEAP_START;
+            while (order > 0 && order_to_size(order) > size) {
+                order--;
             }
             
-            uint32_t start_addr = (uint32_t)base;
-            uint32_t end_addr = (uint32_t)(base + length);
-            
-            if (start_addr >= HEAP_START + HEAP_SIZE) continue;
-            if (end_addr > HEAP_START + HEAP_SIZE) {
-                end_addr = HEAP_START + HEAP_SIZE;
+            while (order > 0 && (start_addr & ((1 << (order + 12)) - 1))) {
+                order--;
             }
             
-            total_memory += (end_addr - start_addr);
+            free_block_t* block = (free_block_t*)start_addr;
+            block->next = free_lists[order];
+            free_lists[order] = block;
             
-            start_addr = (start_addr + MIN_BLOCK_SIZE - 1) & ~(MIN_BLOCK_SIZE - 1);
-            end_addr = end_addr & ~(MIN_BLOCK_SIZE - 1);
+            start_addr += order_to_size(order);
+        }
+    } else {
+        for (uint32_t i = 0; i < mmap.count; i++) {
+            uint32_t base_low = (uint32_t)(mmap.entries[i].base_addr & 0xFFFFFFFF);
+            uint32_t base_high = (uint32_t)(mmap.entries[i].base_addr >> 32);
+            uint32_t len_low = (uint32_t)(mmap.entries[i].length & 0xFFFFFFFF);
+            uint32_t len_high = (uint32_t)(mmap.entries[i].length >> 32);
             
-            while (start_addr < end_addr) {
-                uint32_t size = end_addr - start_addr;
-                uint32_t order = MAX_ORDER - 1;
+            printf("{FG(200,200,100)}[DEBUG] Entry %u:\n", i);
+            printf("  Base: 0x%x%08x (%u MB)\n", base_high, base_low, base_low / 1048576);
+            printf("  Len:  0x%x%08x (%u MB)\n", len_high, len_low, len_low / 1048576);
+            printf("  Type: %u ", mmap.entries[i].type);
+            
+            if (mmap.entries[i].type == 1) printf("(USABLE)\n");
+            else if (mmap.entries[i].type == 2) printf("(RESERVED)\n");
+            else if (mmap.entries[i].type == 3) printf("(ACPI_RECLAIMABLE)\n");
+            else if (mmap.entries[i].type == 4) printf("(ACPI_NVS)\n");
+            else if (mmap.entries[i].type == 5) printf("(BAD)\n");
+            else printf("(UNKNOWN)\n");
+            
+            if (mmap.entries[i].type == MMAP_TYPE_USABLE) {
+                uint64_t base = mmap.entries[i].base_addr;
+                uint64_t length = mmap.entries[i].length;
                 
-                while (order > 0 && order_to_size(order) > size) {
-                    order--;
+                printf("  -> Processing usable region\n");
+                
+                if (base < HEAP_START) {
+                    if (base + length <= HEAP_START) {
+                        printf("  -> Skipped: below HEAP_START\n");
+                        continue;
+                    }
+                    uint64_t old_len = length;
+                    length -= (HEAP_START - base);
+                    base = HEAP_START;
+                    printf("  -> Adjusted: clipped %u bytes below HEAP_START\n", 
+                           (uint32_t)(old_len - length));
                 }
                 
-                while (order > 0 && (start_addr & ((1 << (order + 12)) - 1))) {
-                    order--;
+                uint32_t start_addr = (uint32_t)base;
+                uint32_t end_addr = (uint32_t)(base + length);
+                
+                if (start_addr >= HEAP_START + HEAP_SIZE) {
+                    printf("  -> Skipped: above HEAP_END\n");
+                    continue;
+                }
+                if (end_addr > HEAP_START + HEAP_SIZE) {
+                    uint32_t old_end = end_addr;
+                    end_addr = HEAP_START + HEAP_SIZE;
+                    printf("  -> Adjusted: clipped from 0x%x to 0x%x\n", old_end, end_addr);
                 }
                 
-                free_block_t* block = (free_block_t*)start_addr;
-                block->next = free_lists[order];
-                free_lists[order] = block;
+                uint32_t region_size = end_addr - start_addr;
+                total_memory += region_size;
                 
-                start_addr += order_to_size(order);
+                printf("  -> Added: 0x%x - 0x%x (%u MB)\n",
+                       start_addr, end_addr, region_size / (1024 * 1024));
+                
+                start_addr = (start_addr + MIN_BLOCK_SIZE - 1) & ~(MIN_BLOCK_SIZE - 1);
+                end_addr = end_addr & ~(MIN_BLOCK_SIZE - 1);
+                
+                while (start_addr < end_addr) {
+                    uint32_t size = end_addr - start_addr;
+                    uint32_t order = MAX_ORDER - 1;
+                    
+                    while (order > 0 && order_to_size(order) > size) {
+                        order--;
+                    }
+                    
+                    while (order > 0 && (start_addr & ((1 << (order + 12)) - 1))) {
+                        order--;
+                    }
+                    
+                    free_block_t* block = (free_block_t*)start_addr;
+                    block->next = free_lists[order];
+                    free_lists[order] = block;
+                    
+                    start_addr += order_to_size(order);
+                }
+            } else {
+                printf("  -> Skipped: not usable\n");
             }
         }
     }
     
     bitmap_size = (HEAP_SIZE / MIN_BLOCK_SIZE + 7) / 8;
-    fast_memset(bitmap, 0, bitmap_size);
+    for (uint32_t i = 0; i < bitmap_size; i++) {
+        bitmap[i] = 0;
+    }
     
     uint32_t order_map_size = HEAP_SIZE / MIN_BLOCK_SIZE;
-    fast_memset(order_map, 0, order_map_size);
+    for (uint32_t i = 0; i < order_map_size; i++) {
+        order_map[i] = 0;
+    }
+    
+    printf("{FG(100,200,255)}[DEBUG] Total memory initialized: %u MB\n", 
+           total_memory / (1024 * 1024));
 }
 
 memory_map_t get_mmap() {
@@ -194,7 +259,9 @@ void* pmm_malloc(uint32_t size) {
     
     used_memory += order_to_size(order);
     
-    fast_memset(block, 0, order_to_size(order));
+    for (uint32_t i = 0; i < order_to_size(order); i++) {
+        ((uint8_t*)block)[i] = 0;
+    }
     
     return block;
 }
