@@ -32,7 +32,7 @@ static page_table_t* vmm_get_page_table(page_directory_t* dir, uint32_t virt, ui
         void* table_phys = pmm_malloc(PAGE_SIZE);
         if (!table_phys) return 0;
         
-        memset(table_phys, 0, PAGE_SIZE);
+        // pmm_malloc already clears the memory, no need for memset
         dir->entries[pd_index] = ((uint32_t)table_phys & 0xFFFFF000) | PAGE_PRESENT | PAGE_WRITE;
         
         return (page_table_t*)table_phys;
@@ -128,6 +128,11 @@ void* vmm_alloc_pages(uint32_t count, uint32_t flags) {
     static uint32_t next_virt = KERNEL_HEAP_VIRT;
     uint32_t start_virt = next_virt;
     
+    // Check if paging is enabled by reading CR0
+    uint32_t cr0;
+    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+    uint8_t paging_enabled = (cr0 & 0x80000000) ? 1 : 0;
+    
     for (uint32_t i = 0; i < count; i++) {
         void* phys = pmm_malloc(PAGE_SIZE);
         if (!phys) {
@@ -143,11 +148,23 @@ void* vmm_alloc_pages(uint32_t count, uint32_t flags) {
         uint32_t v = start_virt + (i * PAGE_SIZE);
         vmm_map_page(v, (uint32_t)phys, flags | PAGE_PRESENT | PAGE_WRITE);
         
-        // Clear the newly mapped virtual memory
-        memset((void*)v, 0, PAGE_SIZE);
+        // Clear memory - use physical address if paging is disabled
+        if (paging_enabled) {
+            memset((void*)v, 0, PAGE_SIZE);
+        } else {
+            memset(phys, 0, PAGE_SIZE);
+        }
     }
     
     next_virt += (count * PAGE_SIZE);
+    
+    // If paging is not enabled, return physical address instead
+    if (!paging_enabled) {
+        // Get the physical address of the first allocated page
+        uint32_t phys_start = vmm_get_physical(start_virt);
+        return (void*)(phys_start & 0xFFFFF000);
+    }
+    
     return (void*)start_virt;
 }
 
