@@ -470,13 +470,13 @@ int xcfs_list(const char* path) {
                 "{FG(0,255,0)}" : "{FG(255,255,255)}";
             
             if (entries[i].size >= 1024*1024) {
-                printf("%s%s {FG(150,150,150)}(%u MB)\n", 
+                printf("%s%s (%u MB)\n", 
                     color, entries[i].name, entries[i].size / (1024*1024));
             } else if (entries[i].size >= 1024) {
-                printf("%s%s {FG(150,150,150)}(%u KB)\n", 
+                printf("%s%s (%u KB)\n", 
                     color, entries[i].name, entries[i].size / 1024);
             } else {
-                printf("%s%s {FG(150,150,150)}(%u B)\n", 
+                printf("%s%s (%u B)\n", 
                     color, entries[i].name, entries[i].size);
             }
             
