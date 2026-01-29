@@ -15,6 +15,7 @@ get_memory_map:
     
     xor eax, eax
     mov es, ax
+    mov ds, ax
     xor ebx, ebx
     xor bp, bp
     mov dword [0x7FFC], 0
@@ -27,83 +28,86 @@ get_memory_map:
     mov ecx, 24
     int 0x15
     
-    jc .try_fallback
+    jc .finish_and_add_extended
     
     cmp eax, 0x534D4150
-    jne .try_fallback
+    jne .finish_and_add_extended
 
-    test ecx, ecx
-    jz .check_next
+    cmp ecx, 20
+    jl .check_next
     
     mov si, MMAP_BUFFER
     mov ax, bp
-    push dx
-    mov dx, 20
-    mul dx
-    pop dx
+    mov cx, 20
+    mul cx
     mov di, MMAP_ADDR
     add di, ax
     
-    push ecx
-    mov ecx, 5
-    rep movsd
-    pop ecx
+    mov cx, 20
+.copy_loop:
+    mov al, [si]
+    mov [di], al
+    inc si
+    inc di
+    dec cx
+    jnz .copy_loop
     
     inc bp
     
 .check_next:
-    cmp bp, MAX_MMAP_ENTRIES
-    jge .mmap_done
+    cmp bp, MAX_MMAP_ENTRIES - 1
+    jge .finish_and_add_extended
     
     test ebx, ebx
     jne .mmap_loop
-    
-    jmp .mmap_done
 
-.try_fallback:
-    test bp, bp
+.finish_and_add_extended:
+    mov si, MMAP_ADDR
+    mov cx, bp
+    test cx, cx
+    jz .add_extended_only
+    
+    xor bx, bx
+    
+.check_extended_loop:
+    mov eax, [si + 0]
+    mov edx, [si + 4]
+    
+    cmp edx, 0
+    jne .next_entry
+    cmp eax, 0x100000
+    jb .next_entry
+    
+    mov bx, 1
+    jmp .mmap_done
+    
+.next_entry:
+    add si, 20
+    dec cx
+    jnz .check_extended_loop
+    
+    test bx, bx
     jnz .mmap_done
-    
-    mov ax, 0xE801
-    int 0x15
-    jc .manual_fallback
-    
-    movzx edx, ax
-    shl edx, 10
-    movzx ecx, bx
-    shl ecx, 16
-    add edx, ecx
-    add edx, 0x100000
-    
-    mov dword [MMAP_ADDR], 0
-    mov dword [MMAP_ADDR+4], 0
-    mov dword [MMAP_ADDR+8], 0x9FC00
-    mov dword [MMAP_ADDR+12], 0
-    mov dword [MMAP_ADDR+16], 1
-    
-    mov dword [MMAP_ADDR+20], 0x100000
-    mov dword [MMAP_ADDR+24], 0
-    mov dword [MMAP_ADDR+28], edx
-    mov dword [MMAP_ADDR+32], 0
-    mov dword [MMAP_ADDR+36], 1
-    
-    mov bp, 2
-    jmp .mmap_done
 
-.manual_fallback:
-    mov dword [MMAP_ADDR], 0
-    mov dword [MMAP_ADDR+4], 0
-    mov dword [MMAP_ADDR+8], 0x9FC00
-    mov dword [MMAP_ADDR+12], 0
-    mov dword [MMAP_ADDR+16], 1
+.add_extended_only:
+    mov ax, bp
+    mov cx, 20
+    mul cx
+    mov di, MMAP_ADDR
+    add di, ax
     
-    mov dword [MMAP_ADDR+20], 0x100000
-    mov dword [MMAP_ADDR+24], 0
-    mov dword [MMAP_ADDR+28], 0x3F00000
-    mov dword [MMAP_ADDR+32], 0
-    mov dword [MMAP_ADDR+36], 1
+    mov eax, 0x100000
+    stosd
+    xor eax, eax
+    stosd
+    mov eax, 0x3F00000
+    stosd
+    xor eax, eax
+    stosd
+    mov eax, 1
+    stosd
     
-    mov bp, 2
+    inc bp
     
 .mmap_done:
     movzx eax, bp
