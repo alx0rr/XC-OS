@@ -311,9 +311,6 @@ void kernel_main() {
         else if (strcmp(cmd, "stat") == 0) {
             cmd_stat(argc, args);
         }
-        else if (strcmp(cmd, "tree") == 0) {
-            cmd_tree(argc, args);
-        }
         else if (strcmp(cmd, "uptime") == 0) {
             cmd_uptime();
         }
