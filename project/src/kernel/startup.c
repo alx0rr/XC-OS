@@ -9,6 +9,7 @@
 
 void startup() {
     vbe_init();
+    text_init();
     clear();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} VBE initialized\n");
     

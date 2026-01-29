@@ -2,20 +2,19 @@
 #define TEXT_H
 
 #include <stdint.h>
-/* CHAR_WIDTH = orig_CHAR_WIDTH / now_SCALE * new_SCALE
-CHAR_HEIGHT = orig_CHAR_HEIGHT / now_SCALE * new_SCALE
-ONLY INT! NOT FLOAT!
-*/
-#define CHAR_WIDTH 8
-#define CHAR_HEIGHT 14
-#define FONT_SCALE 1
-/*
-#define CHAR_WIDTH 16
-#define CHAR_HEIGHT 28
-#define FONT_SCALE 2
-*/
+
+extern uint8_t current_font_scale;
+
+#define CHAR_WIDTH (8 * current_font_scale)
+#define CHAR_HEIGHT (14 * current_font_scale)
+#define FONT_SCALE current_font_scale
+
 #define X_MARGIN 0
 #define Y_MARGIN 0
+
+void text_init();
+void text_set_scale(uint8_t scale);
+uint8_t text_get_scale();
 
 void putchar(char c);
 void printf(const char *format, ...);
@@ -28,4 +27,4 @@ extern uint16_t ypos;
 extern uint32_t fg_color;
 extern uint32_t bg_color;
 
-#endif 
+#endif
