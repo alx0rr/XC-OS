@@ -27,9 +27,9 @@ get_memory_map:
     mov edx, 0x534D4150
     mov ecx, 24
     int 0x15
-    jc .try_fallback
+    jc .e820_done
     cmp eax, 0x534D4150
-    jne .try_fallback
+    jne .e820_done
 
     mov ax, [COUNT_ADDR]
     inc ax
@@ -40,48 +40,55 @@ get_memory_map:
 
     test ebx, ebx
     jnz .e820_loop
-    jmp .check_entries
 
-.try_fallback:
+.e820_done:
     mov ax, [COUNT_ADDR]
     test ax, ax
-    jnz .check_entries
+    jz .add_extended
     
+    mov bx, ax
+    dec bx
+    imul bx, 24
+    add bx, MMAP_ADDR
+    add bx, 8
+    
+    mov eax, [bx]
+    mov edx, [bx+4]
+    
+    cmp edx, 0
+    ja .add_extended
+    cmp eax, 0x100000
+    jae .skip_extended
+
+.add_extended:
     mov ah, 0x88
     int 0x15
-    jc .e820_done
+    jc .skip_extended
     
     test ax, ax
-    jz .e820_done
+    jz .skip_extended
     
-    mov di, MMAP_ADDR
+    mov bx, [COUNT_ADDR]
+    cmp bx, MAX_ENTRIES
+    jae .skip_extended
     
-    mov dword [di], 0x00000000
+    imul di, bx, 24
+    add di, MMAP_ADDR
+    
+    mov dword [di], 0x00100000
     mov dword [di+4], 0x00000000
-    mov dword [di+8], 0x0009fc00
-    mov dword [di+12], 0x00000000
-    mov dword [di+16], 1
-    mov dword [di+20], 0
-    add di, 24
     
     movzx eax, ax
     shl eax, 10
-    mov dword [di], 0x00100000
-    mov dword [di+4], 0x00000000
     mov dword [di+8], eax
     mov dword [di+12], 0x00000000
     mov dword [di+16], 1
     mov dword [di+20], 0
     
-    mov word [COUNT_ADDR], 2
-    jmp .e820_done
+    inc bx
+    mov [COUNT_ADDR], bx
 
-.check_entries:
-    mov ax, [COUNT_ADDR]
-    cmp ax, 1
-    jbe .try_fallback
-
-.e820_done:
+.skip_extended:
     mov ax, [COUNT_ADDR]
     mov word [COUNT_ADDR], ax
     mov word [COUNT_ADDR+2], 0
