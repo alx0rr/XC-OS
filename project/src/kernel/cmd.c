@@ -10,9 +10,9 @@ void cmd_banner(int argc, char** argv) {
     }
     
     printf("\n");
-    printf("  ╔══════════════════════════════════════╗\n");
-    printf("  ║                                      ║\n");
-    printf("  ║  %s", argv[0]);
+    printf("  +======================================+\n");
+    printf("  |                                      |\n");
+    printf("  |  %s", argv[0]);
     
     int len = 0;
     for (int i = 0; argv[0][i]; i++) len++;
@@ -21,9 +21,9 @@ void cmd_banner(int argc, char** argv) {
         printf(" ");
     }
     
-    printf("║\n");
-    printf("  ║                                      ║\n");
-    printf("  ╚══════════════════════════════════════╝\n");
+    printf("|\n");
+    printf("  |                                      |\n");
+    printf("  +--------------------------------------+\n");
     printf("\n");
 }
 
@@ -63,7 +63,7 @@ void print_tree_recursive(const char* path, int level) {
         }
         
         if (entries[i].type == XCFS_TYPE_DIR) {
-            printf("{FG(100,200,255)}├─ [%s]/\n", entries[i].name);
+            printf("{FG(100,200,255)} +- [%s]/\n", entries[i].name);
             
             char subpath[256];
             strcpy(subpath, path);
@@ -74,7 +74,7 @@ void print_tree_recursive(const char* path, int level) {
             
             print_tree_recursive(subpath, level + 1);
         } else {
-            printf("{FG(255,255,255)}├─ %s\n", entries[i].name);
+            printf("{FG(255,255,255)}+- %s\n", entries[i].name);
         }
     }
 }
