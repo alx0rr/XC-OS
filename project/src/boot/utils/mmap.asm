@@ -16,7 +16,7 @@ get_memory_map:
     xor eax, eax
     mov es, ax
     xor ebx, ebx
-    xor cx, cx
+    xor bp, bp
     mov dword [0x7FFC], 0
     
 .mmap_loop:
@@ -24,10 +24,8 @@ get_memory_map:
     
     mov edx, 0x534D4150
     mov eax, 0xE820
-    push ecx
-    mov ecx, 24
+    mov ecx, 20
     int 0x15
-    pop ecx
     
     jc .mmap_done
     
@@ -35,30 +33,25 @@ get_memory_map:
     jne .mmap_done
 
     mov si, MMAP_BUFFER
-    mov ax, cx
-    push dx
-    mov dx, 20
-    mul dx
-    pop dx
+    mov ax, bp
+    mov cx, 20
+    mul cx              
     mov di, MMAP_ADDR
     add di, ax
     
-    push ecx
-    mov ecx, 5
+    mov cx, 5            
     rep movsd
-    pop ecx
     
-    inc cx
+    inc bp
     
-    cmp cx, MAX_MMAP_ENTRIES
+    cmp bp, MAX_MMAP_ENTRIES
     jge .mmap_done
     
     test ebx, ebx
     jne .mmap_loop
     
 .mmap_done:
-    xor eax, eax
-    mov ax, cx
+    movzx eax, bp
     mov dword [0x7FFC], eax
     
     pop di
