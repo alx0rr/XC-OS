@@ -149,36 +149,47 @@ void* vmm_alloc_pages(uint32_t count, uint32_t flags) {
     __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
     uint8_t paging_enabled = (cr0 & 0x80000000) ? 1 : 0;
     
+    void* first_phys = 0;
+    
     for (uint32_t i = 0; i < count; i++) {
         void* phys = pmm_malloc(PAGE_SIZE);
         if (!phys) {
+            // Cleanup on allocation failure
             for (uint32_t j = 0; j < i; j++) {
-                uint32_t v = start_virt + (j * PAGE_SIZE);
-                uint32_t p = vmm_get_physical(v);
-                vmm_unmap_page(v);
-                pmm_free((void*)(p & 0xFFFFF000));
+                if (paging_enabled) {
+                    uint32_t v = start_virt + (j * PAGE_SIZE);
+                    uint32_t p = vmm_get_physical(v);
+                    vmm_unmap_page(v);
+                    pmm_free((void*)(p & 0xFFFFF000));
+                } else {
+                    // When paging disabled, we allocated physical memory directly
+                    uint32_t p = (uint32_t)first_phys + (j * PAGE_SIZE);
+                    pmm_free((void*)p);
+                }
             }
             return 0;
         }
         
-        uint32_t v = start_virt + (i * PAGE_SIZE);
-        vmm_map_page(v, (uint32_t)phys, flags | PAGE_PRESENT | PAGE_WRITE);
+        if (i == 0) first_phys = phys;
         
-        // Clear memory - use physical address if paging is disabled
         if (paging_enabled) {
+            // When paging is enabled, use virtual addresses
+            uint32_t v = start_virt + (i * PAGE_SIZE);
+            vmm_map_page(v, (uint32_t)phys, flags | PAGE_PRESENT | PAGE_WRITE);
             memset((void*)v, 0, PAGE_SIZE);
         } else {
+            // When paging is disabled, create identity mapping for the physical address
+            uint32_t phys_addr = (uint32_t)phys;
+            vmm_map_page(phys_addr, phys_addr, flags | PAGE_PRESENT | PAGE_WRITE);
             memset(phys, 0, PAGE_SIZE);
         }
     }
     
     next_virt += (count * PAGE_SIZE);
     
-    // If paging is not enabled, return physical address instead
+    // Return appropriate address based on paging state
     if (!paging_enabled) {
-        // Get the physical address of the first allocated page
-        uint32_t phys_start = vmm_get_physical(start_virt);
-        return (void*)(phys_start & 0xFFFFF000);
+        return first_phys;
     }
     
     return (void*)start_virt;
