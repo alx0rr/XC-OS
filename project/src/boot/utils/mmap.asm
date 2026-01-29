@@ -27,9 +27,9 @@ get_memory_map:
     mov edx, 0x534D4150
     mov ecx, 24
     int 0x15
-    jc .e820_done
+    jc .try_fallback
     cmp eax, 0x534D4150
-    jne .e820_done
+    jne .try_fallback
 
     mov ax, [COUNT_ADDR]
     inc ax
@@ -40,6 +40,46 @@ get_memory_map:
 
     test ebx, ebx
     jnz .e820_loop
+    jmp .check_entries
+
+.try_fallback:
+    mov ax, [COUNT_ADDR]
+    test ax, ax
+    jnz .check_entries
+    
+    mov ah, 0x88
+    int 0x15
+    jc .e820_done
+    
+    test ax, ax
+    jz .e820_done
+    
+    mov di, MMAP_ADDR
+    
+    mov dword [di], 0x00000000
+    mov dword [di+4], 0x00000000
+    mov dword [di+8], 0x0009fc00
+    mov dword [di+12], 0x00000000
+    mov dword [di+16], 1
+    mov dword [di+20], 0
+    add di, 24
+    
+    movzx eax, ax
+    shl eax, 10
+    mov dword [di], 0x00100000
+    mov dword [di+4], 0x00000000
+    mov dword [di+8], eax
+    mov dword [di+12], 0x00000000
+    mov dword [di+16], 1
+    mov dword [di+20], 0
+    
+    mov word [COUNT_ADDR], 2
+    jmp .e820_done
+
+.check_entries:
+    mov ax, [COUNT_ADDR]
+    cmp ax, 1
+    jbe .try_fallback
 
 .e820_done:
     mov ax, [COUNT_ADDR]
