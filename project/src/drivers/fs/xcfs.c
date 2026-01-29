@@ -466,18 +466,31 @@ int xcfs_list(const char* path) {
             printf("{FG(100,200,255)}[DIR]{FG(255,255,255)}  %s\n", entries[i].name);
             dirs++;
         } else {
-            const char* color = (entries[i].flags & XCFS_FLAG_EXECUTABLE) ? 
-                "{FG(0,255,0)}" : "{FG(255,255,255)}";
-            
-            if (entries[i].size >= 1024*1024) {
-                printf("%s%s (%u MB)\n", 
-                    color, entries[i].name, entries[i].size / (1024*1024));
-            } else if (entries[i].size >= 1024) {
-                printf("%s%s (%u KB)\n", 
-                    color, entries[i].name, entries[i].size / 1024);
+            // ИСПРАВЛЕНО: коды цвета теперь в формате printf, а не через %s
+            if (entries[i].flags & XCFS_FLAG_EXECUTABLE) {
+                // Исполняемый файл - зелёный
+                if (entries[i].size >= 1024*1024) {
+                    printf("{FG(0,255,0)}%s {FG(150,150,150)}(%u MB)\n", 
+                        entries[i].name, entries[i].size / (1024*1024));
+                } else if (entries[i].size >= 1024) {
+                    printf("{FG(0,255,0)}%s {FG(150,150,150)}(%u KB)\n", 
+                        entries[i].name, entries[i].size / 1024);
+                } else {
+                    printf("{FG(0,255,0)}%s {FG(150,150,150)}(%u B)\n", 
+                        entries[i].name, entries[i].size);
+                }
             } else {
-                printf("%s%s (%u B)\n", 
-                    color, entries[i].name, entries[i].size);
+                // Обычный файл - белый
+                if (entries[i].size >= 1024*1024) {
+                    printf("{FG(255,255,255)}%s {FG(150,150,150)}(%u MB)\n", 
+                        entries[i].name, entries[i].size / (1024*1024));
+                } else if (entries[i].size >= 1024) {
+                    printf("{FG(255,255,255)}%s {FG(150,150,150)}(%u KB)\n", 
+                        entries[i].name, entries[i].size / 1024);
+                } else {
+                    printf("{FG(255,255,255)}%s {FG(150,150,150)}(%u B)\n", 
+                        entries[i].name, entries[i].size);
+                }
             }
             
             files++;
