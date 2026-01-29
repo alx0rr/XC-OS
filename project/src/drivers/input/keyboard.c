@@ -13,7 +13,7 @@ static char input_buffer[KEYBOARD_BUFFER_SIZE];
 static volatile uint32_t buffer_head = 0;
 static volatile uint32_t buffer_tail = 0;
 static volatile uint8_t shift_pressed = 0;
-static volatile uint8_t ctrl_pressed = 0;
+volatile uint8_t ctrl_pressed = 0;
 static volatile uint8_t alt_pressed = 0;
 static volatile uint8_t caps_lock = 0;
 

@@ -1,6 +1,7 @@
 #include "../include/graphics/vbe.h"
 #include "../include/text.h"
 #include "../include/memory/pmm.h"
+#include "../include/memory/vmm.h"
 #include "../include/cpu/cpu.h"
 #include "../include/interrupts/idt.h"
 #include "../include/storage/ata.h"
@@ -15,6 +16,9 @@ void startup() {
     
     init_pmm();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Memory Manager initialized\n");
+    
+    vmm_init();
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Virtual Memory Manager initialized\n");
     
     cpu_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} CPU detected\n");

@@ -1,12 +1,13 @@
 #include "../include/text.h"
 #include "../include/input/keyboard.h"
 #include "../include/fs/xcfs.h"
+#include "../include/memory/vmm.h"
 #include "../lib/io.h"
 #include "../lib/string.h"
 
 #include "demo.c"
 #include "startup.c"
-#include "cmd.c"
+#include "cmd_extended.c"
 
 void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
@@ -209,9 +210,14 @@ void help() {
     printf("  {FG(255,255,0)}clear{FG(255,255,255)}     - Clear screen\n");
     printf("  {FG(255,255,0)}reboot{FG(255,255,255)}    - Reboot system\n");
     printf("  {FG(255,255,0)}uname{FG(255,255,255)}     - System information\n");
+    printf("  {FG(255,255,0)}sysinfo{FG(255,255,255)}   - Detailed system info\n");
     printf("  {FG(255,255,0)}free{FG(255,255,255)}      - Memory usage\n");
+    printf("  {FG(255,255,0)}meminfo{FG(255,255,255)}   - Detailed memory info\n");
+    printf("  {FG(255,255,0)}vmmstat{FG(255,255,255)}   - Virtual memory stats\n");
+    printf("  {FG(255,255,0)}enablepaging{FG(255,255,255)} - Enable paging\n");
     printf("  {FG(255,255,0)}cpu{FG(255,255,255)}       - CPU information\n");
     printf("  {FG(255,255,0)}uptime{FG(255,255,255)}    - System uptime\n");
+    printf("  {FG(255,255,0)}clock{FG(255,255,255)}     - Full-screen clock\n");
     printf("\n");
     printf("{FG(0,255,255)}=== Directory Commands ===\n");
     printf("  {FG(255,255,0)}ls{FG(255,255,255)} [dir]  - List files\n");
@@ -230,11 +236,14 @@ void help() {
     printf("  {FG(255,255,0)}echo{FG(255,255,255)} <t> > <f> - Write to file\n");
     printf("  {FG(255,255,0)}stat{FG(255,255,255)} <f>  - File information\n");
     printf("\n");
+    printf("{FG(0,255,255)}=== Test & Debug Commands ===\n");
+    printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
+    printf("  {FG(255,255,0)}vmmtest{FG(255,255,255)}   - VMM test suite\n");
+    printf("  {FG(255,255,0)}bench{FG(255,255,255)}     - System benchmark\n");
+    printf("\n");
     printf("{FG(0,255,255)}=== Other Commands ===\n");
     printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
     printf("\n");
-    printf("{FG(0,255,255)}=== Debug Commands ===\n");
-    printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
 }
 
 void kernel_main() {
@@ -299,11 +308,37 @@ void kernel_main() {
         else if (strcmp(cmd, "free") == 0) {
             cmd_free();
         }
+        else if (strcmp(cmd, "vmmstat") == 0) {
+            vmm_print_stats();
+        }
+        else if (strcmp(cmd, "enablepaging") == 0) {
+            printf("{FG(255,255,0)}Enabling paging...\n");
+            vmm_enable_paging();
+            printf("{FG(0,255,0)}Paging enabled successfully\n");
+        }
         else if (strcmp(cmd, "cpu") == 0) {
             cpu_print_info();
         }
         else if (strcmp(cmd, "memtest") == 0) {
             memory_stress_test();
+        }
+        else if (strcmp(cmd, "vmmtest") == 0) {
+            cmd_vmm_test();
+        }
+        else if (strcmp(cmd, "meminfo") == 0) {
+            cmd_meminfo();
+        }
+        else if (strcmp(cmd, "sysinfo") == 0) {
+            cmd_sysinfo();
+        }
+        else if (strcmp(cmd, "bench") == 0) {
+            cmd_bench();
+        }
+        else if (strcmp(cmd, "clock") == 0) {
+            cmd_clock();
+        }
+        else if (strcmp(cmd, "tree") == 0) {
+            cmd_tree(argc, args);
         }
         else if (strcmp(cmd, "banner") == 0) {
             cmd_banner(argc, args);
