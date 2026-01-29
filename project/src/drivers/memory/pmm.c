@@ -8,8 +8,13 @@ typedef struct free_block {
     struct free_block* next;
 } free_block_t;
 
+typedef struct {
+    volatile uint32_t lock;
+} spinlock_t;
+
 static memory_map_t mmap;
 static free_block_t* free_lists[MAX_ORDER];
+static spinlock_t list_locks[MAX_ORDER];
 static uint32_t total_memory = 0;
 static uint32_t used_memory = 0;
 static uint8_t* bitmap = (uint8_t*)BITMAP_ADDR;
@@ -17,6 +22,18 @@ static uint32_t bitmap_size = 0;
 static uint8_t* order_map = (uint8_t*)(BITMAP_ADDR + 0x100000);
 static uint32_t actual_heap_size = 0;
 static uint32_t max_blocks = 0;
+
+static inline void spin_lock(spinlock_t* lock) {
+    while (__sync_lock_test_and_set(&lock->lock, 1)) {
+        while (lock->lock) {
+            __asm__ volatile("pause");
+        }
+    }
+}
+
+static inline void spin_unlock(spinlock_t* lock) {
+    __sync_lock_release(&lock->lock);
+}
 
 static inline void set_bit_atomic(uint32_t bit) {
     if (bit >= max_blocks) return;
@@ -107,11 +124,11 @@ static inline void* block_to_addr(uint32_t block) {
 }
 
 static inline uint32_t get_buddy(uint32_t block, uint32_t order) {
-    if (order >= MAX_ORDER) return block;
+    if (order >= MAX_ORDER) return 0xFFFFFFFF;
     
     uint32_t buddy = block ^ (1 << order);
     
-    if (buddy >= max_blocks) return block;
+    if (buddy >= max_blocks) return 0xFFFFFFFF;
     
     return buddy;
 }
@@ -123,9 +140,8 @@ static inline uint8_t is_aligned(uint32_t addr, uint32_t alignment) {
 static inline uint8_t is_buddy_free(uint32_t buddy_num, uint32_t order) {
     uint32_t blocks_in_buddy = 1 << order;
     
-    if (buddy_num + blocks_in_buddy > max_blocks) {
-        return 0;
-    }
+    if (buddy_num >= max_blocks) return 0;
+    if (buddy_num + blocks_in_buddy > max_blocks) return 0;
     
     for (uint32_t i = 0; i < blocks_in_buddy; i++) {
         if (get_bit(buddy_num + i)) {
@@ -136,12 +152,63 @@ static inline uint8_t is_buddy_free(uint32_t buddy_num, uint32_t order) {
     return 1;
 }
 
+static void add_block_to_list(uint32_t order, void* addr) {
+    if (order >= MAX_ORDER || !addr) return;
+    
+    free_block_t* block = (free_block_t*)addr;
+    spin_lock(&list_locks[order]);
+    block->next = free_lists[order];
+    free_lists[order] = block;
+    spin_unlock(&list_locks[order]);
+}
+
+static void* remove_block_from_list(uint32_t order) {
+    if (order >= MAX_ORDER) return 0;
+    
+    spin_lock(&list_locks[order]);
+    free_block_t* block = free_lists[order];
+    if (block) {
+        free_lists[order] = block->next;
+    }
+    spin_unlock(&list_locks[order]);
+    
+    return block;
+}
+
+static uint8_t remove_specific_block(uint32_t order, void* target) {
+    if (order >= MAX_ORDER || !target) return 0;
+    
+    spin_lock(&list_locks[order]);
+    
+    free_block_t** list = &free_lists[order];
+    free_block_t* prev = 0;
+    uint8_t found = 0;
+    
+    while (*list) {
+        if (*list == target) {
+            if (prev) {
+                prev->next = (*list)->next;
+            } else {
+                free_lists[order] = (*list)->next;
+            }
+            found = 1;
+            break;
+        }
+        prev = *list;
+        list = &((*list)->next);
+    }
+    
+    spin_unlock(&list_locks[order]);
+    return found;
+}
+
 void init_pmm() {
     mmap.count = *(uint32_t*)MMAP_COUNT_ADDR;
     mmap.entries = (mmap_entry_t*)MMAP_ADDR;
     
     for (uint32_t i = 0; i < MAX_ORDER; i++) {
         free_lists[i] = 0;
+        list_locks[i].lock = 0;
     }
     
     total_memory = 0;
@@ -149,6 +216,7 @@ void init_pmm() {
     actual_heap_size = 0;
     
     uint32_t max_end = HEAP_START;
+    uint32_t total_usable = 0;
     
     for (uint32_t i = 0; i < mmap.count; i++) {
         if (mmap.entries[i].type == MMAP_TYPE_USABLE) {
@@ -179,31 +247,32 @@ void init_pmm() {
             if (end_addr > max_end) max_end = end_addr;
             
             uint32_t region_size = end_addr - start_addr;
-            total_memory += region_size;
+            total_usable += region_size;
             
-            start_addr = (start_addr + MIN_BLOCK_SIZE - 1) & ~(MIN_BLOCK_SIZE - 1);
-            end_addr = end_addr & ~(MIN_BLOCK_SIZE - 1);
+            uint32_t aligned_start = (start_addr + MIN_BLOCK_SIZE - 1) & ~(MIN_BLOCK_SIZE - 1);
+            uint32_t aligned_end = end_addr & ~(MIN_BLOCK_SIZE - 1);
             
-            while (start_addr < end_addr) {
-                uint32_t size = end_addr - start_addr;
+            if (aligned_end <= aligned_start) continue;
+            
+            total_memory += (aligned_end - aligned_start);
+            
+            while (aligned_start < aligned_end) {
+                uint32_t size = aligned_end - aligned_start;
                 uint32_t order = MAX_ORDER - 1;
                 
                 while (order > 0 && order_to_size(order) > size) {
                     order--;
                 }
                 
-                while (order > 0 && !is_aligned(start_addr, order_to_size(order))) {
+                while (order > 0 && !is_aligned(aligned_start, order_to_size(order))) {
                     order--;
                 }
                 
                 uint32_t block_size = order_to_size(order);
                 if (block_size == 0 || block_size > size) break;
                 
-                free_block_t* block = (free_block_t*)start_addr;
-                block->next = free_lists[order];
-                free_lists[order] = block;
-                
-                start_addr += block_size;
+                add_block_to_list(order, (void*)aligned_start);
+                aligned_start += block_size;
             }
         }
     }
@@ -211,7 +280,7 @@ void init_pmm() {
     actual_heap_size = (max_end > HEAP_START) ? (max_end - HEAP_START) : 0;
     
     if (actual_heap_size == 0) {
-        actual_heap_size = 64 * 1024 * 1024;
+        actual_heap_size = 128 * 1024 * 1024;
         total_memory = actual_heap_size;
         
         uint32_t start_addr = HEAP_START;
@@ -235,10 +304,7 @@ void init_pmm() {
             uint32_t block_size = order_to_size(order);
             if (block_size == 0 || block_size > size) break;
             
-            free_block_t* block = (free_block_t*)start_addr;
-            block->next = free_lists[order];
-            free_lists[order] = block;
-            
+            add_block_to_list(order, (void*)start_addr);
             start_addr += block_size;
         }
     }
@@ -268,46 +334,41 @@ void* pmm_malloc(uint32_t size) {
     
     if (current_order >= MAX_ORDER) return 0;
     
-    free_block_t* block = free_lists[current_order];
+    free_block_t* block = remove_block_from_list(current_order);
     if (!block) return 0;
     
-    free_lists[current_order] = block->next;
+    uint32_t block_num = addr_to_block(block);
+    if (block_num >= max_blocks) {
+        add_block_to_list(current_order, block);
+        return 0;
+    }
     
     while (current_order > order) {
         current_order--;
         
-        uint32_t block_num = addr_to_block(block);
-        if (block_num >= max_blocks) {
-            free_lists[current_order + 1] = block;
-            return 0;
-        }
-        
         uint32_t buddy_num = get_buddy(block_num, current_order);
-        if (buddy_num >= max_blocks) {
-            free_lists[current_order + 1] = block;
+        if (buddy_num == 0xFFFFFFFF || buddy_num >= max_blocks) {
+            add_block_to_list(current_order + 1, block);
             return 0;
         }
         
         free_block_t* buddy = block_to_addr(buddy_num);
         if (!buddy) {
-            free_lists[current_order + 1] = block;
+            add_block_to_list(current_order + 1, block);
             return 0;
         }
         
-        buddy->next = free_lists[current_order];
-        free_lists[current_order] = buddy;
+        add_block_to_list(current_order, buddy);
         
         if (buddy_num < block_num) {
             block = buddy;
+            block_num = buddy_num;
         }
     }
     
-    uint32_t block_num = addr_to_block(block);
-    if (block_num >= max_blocks) return 0;
-    
     uint32_t blocks_count = 1 << order;
     if (block_num + blocks_count > max_blocks) {
-        free_lists[order] = block;
+        add_block_to_list(order, block);
         return 0;
     }
     
@@ -320,17 +381,27 @@ void* pmm_malloc(uint32_t size) {
     uint32_t alloc_size = order_to_size(order);
     if (alloc_size > 0) {
         __sync_fetch_and_add(&used_memory, alloc_size);
-        fast_memset(block, 0, alloc_size);
     }
     
     return block;
+}
+
+void* pmm_calloc(uint32_t size) {
+    void* ptr = pmm_malloc(size);
+    if (ptr) {
+        uint32_t order = get_order(size);
+        uint32_t alloc_size = order_to_size(order);
+        fast_memset(ptr, 0, alloc_size);
+    }
+    return ptr;
 }
 
 void pmm_free(void* ptr) {
     if (!ptr) return;
     
     uint32_t addr = (uint32_t)ptr;
-    if (addr < HEAP_START || addr >= HEAP_START + actual_heap_size) {
+ 
+   if (addr < HEAP_START || addr >= HEAP_START + actual_heap_size) {
         return;
     }
     
@@ -345,14 +416,7 @@ void pmm_free(void* ptr) {
     
     uint8_t order = get_order_stored(block_num);
     if (order == 0xFF || order >= MAX_ORDER) {
-        order = 0;
-        uint32_t test_blocks = 1;
-        while (order < MAX_ORDER - 1 && 
-               block_num + test_blocks < max_blocks &&
-               get_bit(block_num + test_blocks)) {
-            order++;
-            test_blocks = 1 << order;
-        }
+        return;
     }
     
     uint32_t blocks_count = 1 << order;
@@ -376,32 +440,14 @@ void pmm_free(void* ptr) {
     while (order < MAX_ORDER - 1) {
         uint32_t buddy_num = get_buddy(block_num, order);
         
-        if (buddy_num >= max_blocks) break;
+        if (buddy_num == 0xFFFFFFFF || buddy_num >= max_blocks) break;
         
         if (!is_buddy_free(buddy_num, order)) break;
         
         free_block_t* buddy = block_to_addr(buddy_num);
         if (!buddy) break;
         
-        free_block_t** list = &free_lists[order];
-        free_block_t* prev = 0;
-        uint8_t found = 0;
-        
-        while (*list) {
-            if (*list == buddy) {
-                if (prev) {
-                    prev->next = (*list)->next;
-                } else {
-                    free_lists[order] = (*list)->next;
-                }
-                found = 1;
-                break;
-            }
-            prev = *list;
-            list = &((*list)->next);
-        }
-        
-        if (!found) break;
+        if (!remove_specific_block(order, buddy)) break;
         
         if (buddy_num < block_num) {
             block = buddy;
@@ -411,8 +457,7 @@ void pmm_free(void* ptr) {
         order++;
     }
     
-    block->next = free_lists[order];
-    free_lists[order] = block;
+    add_block_to_list(order, block);
 }
 
 void pmm_print_stats() {
@@ -430,6 +475,63 @@ void pmm_print_stats() {
 }
 
 void pmm_defragment() {
+    for (uint32_t order = 0; order < MAX_ORDER - 1; order++) {
+        spin_lock(&list_locks[order]);
+        
+        free_block_t* current = free_lists[order];
+        while (current) {
+            uint32_t block_num = addr_to_block(current);
+            uint32_t buddy_num = get_buddy(block_num, order);
+            
+            if (buddy_num == 0xFFFFFFFF || buddy_num >= max_blocks) {
+                current = current->next;
+                continue;
+            }
+            
+            if (!is_buddy_free(buddy_num, order)) {
+                current = current->next;
+                continue;
+            }
+            
+            free_block_t* buddy = block_to_addr(buddy_num);
+            if (!buddy) {
+                current = current->next;
+                continue;
+            }
+            
+            free_block_t** list = &free_lists[order];
+            free_block_t* prev_curr = 0;
+            while (*list && *list != current) {
+                prev_curr = *list;
+                list = &((*list)->next);
+            }
+            if (*list) {
+                if (prev_curr) prev_curr->next = current->next;
+                else free_lists[order] = current->next;
+            }
+            
+            list = &free_lists[order];
+            free_block_t* prev_buddy = 0;
+            while (*list && *list != buddy) {
+                prev_buddy = *list;
+                list = &((*list)->next);
+            }
+            if (*list) {
+                if (prev_buddy) prev_buddy->next = buddy->next;
+                else free_lists[order] = buddy->next;
+            }
+            
+            free_block_t* merged = (buddy_num < block_num) ? buddy : current;
+            spin_unlock(&list_locks[order]);
+            
+            add_block_to_list(order + 1, merged);
+            
+            spin_lock(&list_locks[order]);
+            current = free_lists[order];
+        }
+        
+        spin_unlock(&list_locks[order]);
+    }
 }
 
 uint32_t pmm_get_total_memory() {

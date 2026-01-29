@@ -29,6 +29,7 @@ typedef struct {
 void init_pmm();
 memory_map_t get_mmap();
 void* pmm_malloc(uint32_t size);
+void* pmm_calloc(uint32_t size);
 void pmm_free(void* ptr);
 void pmm_print_stats();
 void pmm_defragment();

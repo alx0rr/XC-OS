@@ -50,7 +50,7 @@ void memory_stress_test(void) {
 
     int allocated = 0;
     for (int i = 0; i < blocks; i++) {
-        ptrs[i] = pmm_malloc(alloc_each);
+        ptrs[i] = pmm_calloc(alloc_each);
         if (!ptrs[i]) {
             printf("{FG(255,0,0)}Allocation failed at block %d\n", i);
             printf("{FG(255,100,0)}Free memory before this allocation: %u MB\n", 
