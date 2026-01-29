@@ -28,10 +28,10 @@ get_memory_map:
     mov ecx, 24
     int 0x15
     
-    jc .finish_and_add_extended
+    jc .finish_and_check
     
     cmp eax, 0x534D4150
-    jne .finish_and_add_extended
+    jne .finish_and_check
 
     cmp ecx, 20
     jl .check_next
@@ -56,16 +56,16 @@ get_memory_map:
     
 .check_next:
     cmp bp, MAX_MMAP_ENTRIES - 1
-    jge .finish_and_add_extended
+    jge .finish_and_check
     
     test ebx, ebx
     jne .mmap_loop
 
-.finish_and_add_extended:
+.finish_and_check:
     mov si, MMAP_ADDR
     mov cx, bp
     test cx, cx
-    jz .add_extended_only
+    jz .add_fallback_extended
     
     xor bx, bx
     
@@ -74,14 +74,18 @@ get_memory_map:
     mov edx, [si + 4]
     
     cmp edx, 0
-    jne .next_entry
+    jne .next_check_entry
     cmp eax, 0x100000
-    jb .next_entry
+    jb .next_check_entry
+    
+    mov eax, [si + 16]
+    cmp eax, 1
+    jne .next_check_entry
     
     mov bx, 1
     jmp .mmap_done
     
-.next_entry:
+.next_check_entry:
     add si, 20
     dec cx
     jnz .check_extended_loop
@@ -89,7 +93,7 @@ get_memory_map:
     test bx, bx
     jnz .mmap_done
 
-.add_extended_only:
+.add_fallback_extended:
     mov ax, bp
     mov cx, 20
     mul cx
@@ -100,7 +104,7 @@ get_memory_map:
     stosd
     xor eax, eax
     stosd
-    mov eax, 0x3F00000
+    mov eax, 0x1FF00000
     stosd
     xor eax, eax
     stosd
