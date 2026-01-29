@@ -7,7 +7,7 @@
 
 #include "demo.c"
 #include "startup.c"
-#include "cmd_extended.c"
+#include "cmd.c"
 
 void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
