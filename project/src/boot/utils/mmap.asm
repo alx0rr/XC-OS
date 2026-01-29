@@ -12,7 +12,6 @@ get_memory_map:
     push di
     push dx
     push cx
-    push ax
 
     xor eax, eax
     mov ax, 0
@@ -47,11 +46,12 @@ get_memory_map:
     mov word [COUNT_ADDR], ax
     mov word [COUNT_ADDR+2], 0
 
-    pop ax
     pop cx
     pop dx
     pop di
     pop si
     pop bx
     pop bp
+    
+    movzx eax, word [COUNT_ADDR]
     ret
