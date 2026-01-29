@@ -11,7 +11,7 @@ lib_src="$src_dir/lib"
 IMAGE_SIZE_MB=64
 KERNEL_SIZE_SECTORS=255
 
-echo "Building XC-OS v2.0..."
+echo "Building XC-OS..."
 echo "Image size: ${IMAGE_SIZE_MB}MB"
 echo "Kernel size: ${KERNEL_SIZE_SECTORS} sectors ($(($KERNEL_SIZE_SECTORS * 512 / 1024))KB)"
 
