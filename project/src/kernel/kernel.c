@@ -1,12 +1,12 @@
 #include "../include/text.h"
 #include "../include/input/keyboard.h"
 #include "../include/fs/xcfs.h"
-#include "../include/exec.h"
 #include "../lib/io.h"
 #include "../lib/string.h"
 
 #include "demo.c"
 #include "startup.c"
+#include "cmd.c"
 
 void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
@@ -211,12 +211,14 @@ void help() {
     printf("  {FG(255,255,0)}uname{FG(255,255,255)}     - System information\n");
     printf("  {FG(255,255,0)}free{FG(255,255,255)}      - Memory usage\n");
     printf("  {FG(255,255,0)}cpu{FG(255,255,255)}       - CPU information\n");
+    printf("  {FG(255,255,0)}uptime{FG(255,255,255)}    - System uptime\n");
     printf("\n");
     printf("{FG(0,255,255)}=== Directory Commands ===\n");
     printf("  {FG(255,255,0)}ls{FG(255,255,255)} [dir]  - List files\n");
     printf("  {FG(255,255,0)}cd{FG(255,255,255)} <dir>  - Change directory\n");
     printf("  {FG(255,255,0)}pwd{FG(255,255,255)}       - Print working directory\n");
     printf("  {FG(255,255,0)}mkdir{FG(255,255,255)} <d> - Create directory\n");
+    printf("  {FG(255,255,0)}tree{FG(255,255,255)} [d]  - Show directory tree\n");
     printf("\n");
     printf("{FG(0,255,255)}=== File Commands ===\n");
     printf("  {FG(255,255,0)}cat{FG(255,255,255)} <file> - Show file content\n");
@@ -226,6 +228,10 @@ void help() {
     printf("  {FG(255,255,0)}mv{FG(255,255,255)} <s> <d> - Move file\n");
     printf("  {FG(255,255,0)}echo{FG(255,255,255)} <txt> - Print text\n");
     printf("  {FG(255,255,0)}echo{FG(255,255,255)} <t> > <f> - Write to file\n");
+    printf("  {FG(255,255,0)}stat{FG(255,255,255)} <f>  - File information\n");
+    printf("\n");
+    printf("{FG(0,255,255)}=== Other Commands ===\n");
+    printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
     printf("\n");
     printf("{FG(0,255,255)}=== Debug Commands ===\n");
     printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
@@ -299,21 +305,24 @@ void kernel_main() {
         else if (strcmp(cmd, "memtest") == 0) {
             memory_stress_test();
         }
+        else if (strcmp(cmd, "banner") == 0) {
+            cmd_banner(argc, args);
+        }
+        else if (strcmp(cmd, "stat") == 0) {
+            cmd_stat(argc, args);
+        }
+        else if (strcmp(cmd, "tree") == 0) {
+            cmd_tree(argc, args);
+        }
+        else if (strcmp(cmd, "uptime") == 0) {
+            cmd_uptime();
+        }
         else if (strcmp(cmd, "reboot") == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");
             outb(0x64, 0xFE);
         }
         else if (strlen(cmd) > 0) {
-            char* exec_args[16];
-            exec_args[0] = cmd;
-            for (int i = 0; i < argc; i++) {
-                exec_args[i + 1] = args[i];
-            }
-            
-            int ret = exec_load(cmd, argc + 1, exec_args);
-            if (ret == -1) {
-                printf("{FG(255,0,0)}%s: command not found\n", cmd);
-            }
+            printf("{FG(255,0,0)}%s: command not found\n", cmd);
         }
         
         free_args(args, argc);

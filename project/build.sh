@@ -7,7 +7,6 @@ kernel_src="$src_dir/kernel"
 drivers_src="$src_dir/drivers"
 includes_src="$src_dir/include"
 lib_src="$src_dir/lib"
-utils_src="$src_dir/utils"
 
 IMAGE_SIZE_MB=64
 KERNEL_SIZE_SECTORS=255
@@ -21,7 +20,6 @@ if [ -d "$build_dir" ]; then
     rm -rf "$build_dir"
 fi
 mkdir -p "$build_dir"
-mkdir -p "$build_dir/utils"
 
 echo "Assembling Stage 1..."
 nasm -f bin "$boot_src/stage1.asm" -o "$build_dir/stage1.bin"
@@ -78,10 +76,6 @@ echo "Compiling XCFS v2..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/fs/xcfs.c -o $build_dir/xcfs.o
 [ $? -ne 0 ] && echo "Error compiling XCFS" && exit 1
 
-echo "Compiling Exec..."
-gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/exec/exec.c -o $build_dir/exec.o
-[ $? -ne 0 ] && echo "Error compiling Exec" && exit 1
-
 echo "Compiling Kernel..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $kernel_src/kernel.c -o $build_dir/kernel.o
 [ $? -ne 0 ] && echo "Error compiling Kernel" && exit 1
@@ -92,8 +86,7 @@ ld -m elf_i386 -T "$src_dir/linker.ld" -o "$build_dir/kernel.bin" \
     "$build_dir/pmm.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
     "$build_dir/string.o" "$build_dir/keyboard.o" "$build_dir/time.o" \
     "$build_dir/random.o" "$build_dir/cpu.o" "$build_dir/idt.o" \
-    "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o" \
-    "$build_dir/exec.o"
+    "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o"
 [ $? -ne 0 ] && echo "Error linking Kernel" && exit 1
 
 KERNEL_SIZE=$(($KERNEL_SIZE_SECTORS * 512))
@@ -104,56 +97,6 @@ cat "$build_dir/stage1.bin" "$build_dir/stage2.bin" "$build_dir/kernel.bin" > "$
 
 IMAGE_SIZE=$(($IMAGE_SIZE_MB * 1024 * 1024))
 truncate -s $IMAGE_SIZE "$build_dir/xcos.img"
-
-echo ""
-echo "Creating VBE stubs for utilities..."
-cat > "$utils_src/vbe_stubs.c" << 'VBESTUBS'
-#include <stdint.h>
-
-uint8_t vbe_mode_info_data[256] = {0};
-
-void* vbe_get_framebuffer(void) {
-    return (void*)0xE0000000;
-}
-
-uint16_t vbe_get_width(void) {
-    return 1024;
-}
-
-uint16_t vbe_get_height(void) {
-    return 768;
-}
-
-void* get_vbe_struct(void) {
-    return (void*)vbe_mode_info_data;
-}
-VBESTUBS
-
-echo "Building utilities..."
-if [ -d "$utils_src" ]; then
-    UTILS=(uptime banner tree stat)
-    for util in "${UTILS[@]}"; do
-        if [ -f "$utils_src/${util}.c" ]; then
-            echo "  Compiling ${util}..."
-            gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector \
-                -I$includes_src -c "$utils_src/${util}.c" -o "$build_dir/utils/${util}.o"
-            
-            gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector \
-                -I$includes_src -c "$utils_src/vbe_stubs.c" -o "$build_dir/utils/vbe_stubs.o"
-            
-            ld -m elf_i386 -T "$utils_src/util.ld" -o "$build_dir/utils/${util}.bin" \
-                "$build_dir/utils/${util}.o" \
-                "$build_dir/text.o" "$build_dir/string.o" "$build_dir/time.o" \
-                "$build_dir/xcfs.o" "$build_dir/framebuffer.o" "$build_dir/utils/vbe_stubs.o" "$build_dir/ata.o"
-            
-            [ $? -eq 0 ] && echo "    OK: ${util}.bin"
-        fi
-    done
-fi
-
-echo ""
-echo "Installing utilities to image..."
-python3 install_utils.py "$build_dir/xcos.img" "$build_dir/utils"
 
 SIZE_STAGE1=$(stat -c%s "$build_dir/stage1.bin" 2>/dev/null || stat -f%z "$build_dir/stage1.bin" 2>/dev/null)
 SIZE_STAGE2=$(stat -c%s "$build_dir/stage2.bin" 2>/dev/null || stat -f%z "$build_dir/stage2.bin" 2>/dev/null)
