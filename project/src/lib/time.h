@@ -16,5 +16,6 @@ datetime_t time_get_datetime(void);
 uint32_t time_get_unix_timestamp(void);
 uint32_t time_datetime_to_unix(datetime_t dt);
 datetime_t time_unix_to_datetime(uint32_t ts);
+uint32_t get_uptime(void);
 
 #endif

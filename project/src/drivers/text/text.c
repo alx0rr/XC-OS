@@ -15,6 +15,37 @@ uint16_t xpos = X_MARGIN;
 uint16_t ypos = Y_MARGIN;
 uint32_t bg_color = 0;
 uint32_t fg_color = 0xFFFFFF;
+uint8_t current_font_scale = 1;
+
+void text_init() {
+    uint16_t width = fb_get_width();
+    uint16_t height = fb_get_height();
+    
+    if (width <= 640 && height <= 480) {
+        current_font_scale = 1;
+    } else if (width <= 1024 && height <= 768) {
+        current_font_scale = 2;
+    } else if (width <= 1920 && height <= 1080) {
+        current_font_scale = 2;
+    } else {
+        current_font_scale = 3;
+    }
+    
+    xpos = X_MARGIN;
+    ypos = Y_MARGIN;
+}
+
+void text_set_scale(uint8_t scale) {
+    if (scale >= 1 && scale <= 4) {
+        current_font_scale = scale;
+        xpos = X_MARGIN;
+        ypos = Y_MARGIN;
+    }
+}
+
+uint8_t text_get_scale() {
+    return current_font_scale;
+}
 
 void bitmapblt(
 	uint16_t x,
@@ -35,24 +66,24 @@ void bitmapblt(
 		{
 
 			if (i & *bitpattern) {
-				for (int sy = 0; sy < FONT_SCALE; sy++) {
-					for (int sx = 0; sx < FONT_SCALE; sx++) {
+				for (int sy = 0; sy < current_font_scale; sy++) {
+					for (int sx = 0; sx < current_font_scale; sx++) {
 						fb_putpixel(xx + sx, yy + sy, fore_color);
 					}
 				}
 			} else {
-				for (int sy = 0; sy < FONT_SCALE; sy++) {
-					for (int sx = 0; sx < FONT_SCALE; sx++) {
+				for (int sy = 0; sy < current_font_scale; sy++) {
+					for (int sx = 0; sx < current_font_scale; sx++) {
 						fb_putpixel(xx + sx, yy + sy, back_color);
 					}
 				}
 			}
 
-			xx += FONT_SCALE;
+			xx += current_font_scale;
 		}
 
 		bitpattern++;
-		yy += FONT_SCALE;
+		yy += current_font_scale;
 	}
 }
 
@@ -68,10 +99,13 @@ void drawchar_at_pos(
 }
 
 void putchar(char c) {
+	uint16_t char_width = 8 * current_font_scale;
+	uint16_t char_height = 14 * current_font_scale;
+	
 	if (c == '\n') {
 		xpos = 0;
-		ypos += CHAR_HEIGHT;
-		if (ypos + CHAR_HEIGHT >= fb_get_height() - Y_MARGIN) {
+		ypos += char_height;
+		if (ypos + char_height >= fb_get_height() - Y_MARGIN) {
             fb_fill(bg_color);
             xpos = X_MARGIN;
             ypos = Y_MARGIN;
@@ -79,16 +113,16 @@ void putchar(char c) {
 	} else if (c == '\r') {
 		xpos = 0;
 	} else if (c == '\b') {
-		if (xpos >= CHAR_WIDTH) {
-			xpos -= CHAR_WIDTH;
+		if (xpos >= char_width) {
+			xpos -= char_width;
 		}
 	} else {
 		drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
-		xpos += CHAR_WIDTH;
+		xpos += char_width;
 		if (xpos >= fb_get_width()) {
 			xpos = 0;
-			ypos += CHAR_HEIGHT;
-			if (ypos + CHAR_HEIGHT >= fb_get_height()) {
+			ypos += char_height;
+			if (ypos + char_height >= fb_get_height()) {
 				fb_fill(bg_color);
 				xpos = 0;
 				ypos = 0;
@@ -98,9 +132,10 @@ void putchar(char c) {
 }
 
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
+	uint16_t char_width = 8 * current_font_scale;
 	while (*str != '\0') {
 		drawchar_at_pos(*str, x, y, fore_color, back_color);
-		x += CHAR_WIDTH;
+		x += char_width;
 		str++;
 	}
 }

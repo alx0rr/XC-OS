@@ -81,3 +81,14 @@ datetime_t time_unix_to_datetime(uint32_t ts) {
 uint32_t time_get_unix_timestamp(void) {
     return time_datetime_to_unix(time_get_datetime());
 }
+
+static uint32_t boot_time = 0;
+
+uint32_t get_uptime(void) {
+    if (boot_time == 0) {
+        boot_time = time_get_unix_timestamp();
+        return 0;
+    }
+    uint32_t current_time = time_get_unix_timestamp();
+    return (current_time - boot_time) * 1000;
+}
