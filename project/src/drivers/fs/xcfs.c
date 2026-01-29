@@ -440,7 +440,7 @@ int xcfs_list(const char* path) {
     }
     
     if (xcfs_header.file_count > XCFS_MAX_FILES) {
-        printf("{FG(255,0,0)}Corrupted filesystem (file_count=%u)\n", xcfs_header.file_count);
+        printf("{FG(255,0,0)}Corrupted FS (count=%u)\n", xcfs_header.file_count);
         return -1;
     }
     
@@ -469,11 +469,14 @@ int xcfs_list(const char* path) {
             const char* color = (entries[i].flags & XCFS_FLAG_EXECUTABLE) ? 
                 "{FG(0,255,0)}" : "{FG(255,255,255)}";
             
-            if (entries[i].size >= 1024) {
-                printf("%s%-20s{FG(150,150,150)} %u KB\n", 
+            if (entries[i].size >= 1024*1024) {
+                printf("%s%s {FG(150,150,150)}(%u MB)\n", 
+                    color, entries[i].name, entries[i].size / (1024*1024));
+            } else if (entries[i].size >= 1024) {
+                printf("%s%s {FG(150,150,150)}(%u KB)\n", 
                     color, entries[i].name, entries[i].size / 1024);
             } else {
-                printf("%s%-20s{FG(150,150,150)} %u B\n", 
+                printf("%s%s {FG(150,150,150)}(%u B)\n", 
                     color, entries[i].name, entries[i].size);
             }
             
