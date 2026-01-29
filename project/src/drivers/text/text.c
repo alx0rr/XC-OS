@@ -57,33 +57,20 @@ void bitmapblt(
 )
 {
 	uint16_t xx;
-
 	uint16_t yy = y;
+	
 	for (uint32_t j = 0; j < h; j++) {
-
 		xx = x;
-		for (uint32_t i = 128; i > 0; i >>= 1)
-		{
-
+		for (uint32_t i = 128; i > 0; i >>= 1) {
 			if (i & *bitpattern) {
-				for (int sy = 0; sy < current_font_scale; sy++) {
-					for (int sx = 0; sx < current_font_scale; sx++) {
-						fb_putpixel(xx + sx, yy + sy, fore_color);
-					}
-				}
+				fb_putpixel(xx, yy, fore_color);
 			} else {
-				for (int sy = 0; sy < current_font_scale; sy++) {
-					for (int sx = 0; sx < current_font_scale; sx++) {
-						fb_putpixel(xx + sx, yy + sy, back_color);
-					}
-				}
+				fb_putpixel(xx, yy, back_color);
 			}
-
-			xx += current_font_scale;
+			xx++;
 		}
-
 		bitpattern++;
-		yy += current_font_scale;
+		yy++;
 	}
 }
 
@@ -99,8 +86,8 @@ void drawchar_at_pos(
 }
 
 void putchar(char c) {
-	uint16_t char_width = 8 * current_font_scale;
-	uint16_t char_height = 14 * current_font_scale;
+	uint16_t char_width = 8;
+	uint16_t char_height = 14;
 	
 	if (c == '\n') {
 		xpos = 0;
@@ -132,7 +119,7 @@ void putchar(char c) {
 }
 
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
-	uint16_t char_width = 8 * current_font_scale;
+	uint16_t char_width = 8;
 	while (*str != '\0') {
 		drawchar_at_pos(*str, x, y, fore_color, back_color);
 		x += char_width;

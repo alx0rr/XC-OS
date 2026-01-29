@@ -48,6 +48,10 @@ echo "Compiling Memory Manager..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/memory/pmm.c -o $build_dir/pmm.o
 [ $? -ne 0 ] && echo "Error compiling Memory Manager" && exit 1
 
+echo "Compiling Virtual Memory Manager..."
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/memory/vmm.c -o $build_dir/vmm.o
+[ $? -ne 0 ] && echo "Error compiling Virtual Memory Manager" && exit 1
+
 echo "Compiling Text Manager..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/text/text.c -o $build_dir/text.o
 [ $? -ne 0 ] && echo "Error compiling Text Manager" && exit 1
@@ -83,7 +87,7 @@ gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$
 echo "Linking Kernel..."
 ld -m elf_i386 -T "$src_dir/linker.ld" -o "$build_dir/kernel.bin" \
     "$build_dir/boot.o" "$build_dir/kernel.o" "$build_dir/vbe.o" \
-    "$build_dir/pmm.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
+    "$build_dir/pmm.o" "$build_dir/vmm.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
     "$build_dir/string.o" "$build_dir/keyboard.o" "$build_dir/time.o" \
     "$build_dir/random.o" "$build_dir/cpu.o" "$build_dir/idt.o" \
     "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o"
