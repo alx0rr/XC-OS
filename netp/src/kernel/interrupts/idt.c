@@ -136,7 +136,30 @@ void idt_init() {
 }
 void isr_handler(registers_t *regs) {
     if (regs->int_no < 32) {
-        printf("{FG(255,0,0)}Exception %u at EIP=0x%x\n", regs->int_no, regs->eip);
+        const char* exceptions[] = {
+            "Division By Zero", "Debug", "NMI", "Breakpoint",
+            "Overflow", "Bound Range", "Invalid Opcode", "Device Not Available",
+            "Double Fault", "Coprocessor", "Invalid TSS", "Segment Not Present",
+            "Stack Fault", "General Protection", "Page Fault", "Reserved",
+            "x87 FPU", "Alignment Check", "Machine Check", "SIMD FP"
+        };
+        clear();
+        printf("\n{FG(255,0,0)}CPU EXCEPTION: %s (%u)\n", 
+               (regs->int_no < 20) ? exceptions[regs->int_no] : "Unknown", regs->int_no);
+        printf("{FG(255,255,0)}EIP=0x%x CS=0x%x EFLAGS=0x%x\n", regs->eip, regs->cs, regs->eflags);
+        printf("EAX=0x%x EBX=0x%x ECX=0x%x EDX=0x%x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+        printf("ESP=0x%x EBP=0x%x ESI=0x%x EDI=0x%x\n", regs->esp, regs->ebp, regs->esi, regs->edi);
+        printf("DS=0x%x SS=0x%x ERR=0x%x\n", regs->ds, regs->ss, regs->err_code);
+        if (regs->int_no == 14) {
+            uint32_t cr2;
+            asm volatile("mov %%cr2, %0" : "=r"(cr2));
+            printf("{FG(255,100,100)}Page Fault at: 0x%x ", cr2);
+            if (!(regs->err_code & 1)) printf("(not present) ");
+            if (regs->err_code & 2) printf("(write) "); else printf("(read) ");
+            if (regs->err_code & 4) printf("(user)"); else printf("(kernel)");
+            printf("\n");
+        }
+        printf("{FG(255,0,0)}System halted.\n");
         asm volatile("cli; hlt");
     } else if (regs->int_no >= 32 && regs->int_no < 48) {
         uint8_t irq_no = regs->int_no - 32;

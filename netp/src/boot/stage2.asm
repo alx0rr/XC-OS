@@ -16,7 +16,7 @@ load_xcos:
     mov si, dap
     mov byte [si], 0x10
     mov byte [si+1], 0
-    mov word [si+2], 127
+    mov word [si+2], 255
     mov word [si+4], 0x0000
     mov word [si+6], 0x1000
     mov dword [si+8], 16
@@ -28,10 +28,10 @@ load_xcos:
     mov si, dap
     mov byte [si], 0x10
     mov byte [si+1], 0
-    mov word [si+2], 128
+    mov word [si+2], 257
     mov word [si+4], 0x0000
-    mov word [si+6], 0x4FC0
-    mov dword [si+8], 143
+    mov word [si+6], 0x7FC0
+    mov dword [si+8], 271
     mov dword [si+12], 0
     mov ah, 0x42
     mov dl, [boot_drive]
@@ -75,7 +75,7 @@ protected_mode_start:
     mov esp, 0x90000
     mov esi, 0x10000
     mov edi, 0x100000
-    mov ecx, 32768
+    mov ecx, 65536
     rep movsd
     jmp 0x08:0x100000
 [bits 16]
