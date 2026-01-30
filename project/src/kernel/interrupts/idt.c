@@ -75,7 +75,7 @@ void pic_init() {
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
     outb(0x21, 0xFD);
-    outb(0xA1, 0xFF);
+    outb(0xA1, 0x3F);
 }
 void idt_init() {
     idt_ptr.limit = sizeof(idt) - 1;
