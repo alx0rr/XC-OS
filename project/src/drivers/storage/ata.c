@@ -74,6 +74,11 @@ void ata_init(void) {
     idt_register_irq_handler(14, ata_irq_handler_primary);
     idt_register_irq_handler(15, ata_irq_handler_secondary);
     
+    uint8_t mask = inb(0xA1);
+    mask &= ~(1 << 6);
+    mask &= ~(1 << 7);
+    outb(0xA1, mask);
+    
     ata_devices[0].io_base = ATA_PRIMARY_IO;
     ata_devices[0].ctrl_base = ATA_PRIMARY_CTRL;
     ata_devices[0].master = 1;
