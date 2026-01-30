@@ -149,15 +149,15 @@ int ata_write_sector(uint8_t drive, uint32_t lba, uint8_t* buffer) {
     outb(dev->io_base + ATA_REG_LBA_HI, (lba >> 16) & 0xFF);
     outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
     
-    ata_wait_irq();
-    
-    if(ata_irq_error) return -1;
-    
     if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 100000) < 0) return -1;
     
     uint16_t* buf16 = (uint16_t*)buffer;
     for(int i = 0; i < 256; i++)
         outw(dev->io_base + ATA_REG_DATA, buf16[i]);
+    
+    ata_wait_irq();
+    
+    if(ata_irq_error) return -1;
     
     outb(dev->io_base + ATA_REG_COMMAND, 0xE7);
     
