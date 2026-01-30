@@ -6,14 +6,11 @@
 #include "../../include/text.h"
 #include "../../lib/io.h"
 #include "../../lib/string.h"
+
 #define RTL8139_VENDOR_ID 0x10EC
 #define RTL8139_DEVICE_ID 0x8139
 
-#define RX_BUF_STATIC_ADDR 0x01400000
-#define TX_BUF0_STATIC_ADDR 0x01500000
-#define TX_BUF1_STATIC_ADDR 0x01502000
-#define TX_BUF2_STATIC_ADDR 0x01504000
-#define TX_BUF3_STATIC_ADDR 0x01506000
+#define NET_BUF_BASE 0x00800000
 
 static rtl8139_device_t rtl8139_dev;
 static uint8_t rtl8139_initialized = 0;
@@ -41,22 +38,22 @@ static void rtl8139_read_mac(void) {
 }
 
 static void rtl8139_setup_buffers(void) {
-    rtl8139_dev.rx_buffer = (uint8_t*)RX_BUF_STATIC_ADDR;
-    rtl8139_dev.rx_buffer_phys = RX_BUF_STATIC_ADDR;
+    rtl8139_dev.rx_buffer = (uint8_t*)NET_BUF_BASE;
+    rtl8139_dev.rx_buffer_phys = NET_BUF_BASE;
     
-    for (uint32_t i = 0; i < RTL8139_RX_BUF_SIZE + 2048; i++) {
+    rtl8139_dev.tx_buffer[0] = (uint8_t*)(NET_BUF_BASE + 0x3000);
+    rtl8139_dev.tx_buffer[1] = (uint8_t*)(NET_BUF_BASE + 0x4000);
+    rtl8139_dev.tx_buffer[2] = (uint8_t*)(NET_BUF_BASE + 0x5000);
+    rtl8139_dev.tx_buffer[3] = (uint8_t*)(NET_BUF_BASE + 0x6000);
+    
+    rtl8139_dev.tx_buffer_phys[0] = NET_BUF_BASE + 0x3000;
+    rtl8139_dev.tx_buffer_phys[1] = NET_BUF_BASE + 0x4000;
+    rtl8139_dev.tx_buffer_phys[2] = NET_BUF_BASE + 0x5000;
+    rtl8139_dev.tx_buffer_phys[3] = NET_BUF_BASE + 0x6000;
+    
+    for (uint32_t i = 0; i < (RTL8139_RX_BUF_SIZE + 2048); i++) {
         rtl8139_dev.rx_buffer[i] = 0;
     }
-    
-    rtl8139_dev.tx_buffer[0] = (uint8_t*)TX_BUF0_STATIC_ADDR;
-    rtl8139_dev.tx_buffer[1] = (uint8_t*)TX_BUF1_STATIC_ADDR;
-    rtl8139_dev.tx_buffer[2] = (uint8_t*)TX_BUF2_STATIC_ADDR;
-    rtl8139_dev.tx_buffer[3] = (uint8_t*)TX_BUF3_STATIC_ADDR;
-    
-    rtl8139_dev.tx_buffer_phys[0] = TX_BUF0_STATIC_ADDR;
-    rtl8139_dev.tx_buffer_phys[1] = TX_BUF1_STATIC_ADDR;
-    rtl8139_dev.tx_buffer_phys[2] = TX_BUF2_STATIC_ADDR;
-    rtl8139_dev.tx_buffer_phys[3] = TX_BUF3_STATIC_ADDR;
     
     for (int i = 0; i < RTL8139_NUM_TX_DESC; i++) {
         for (uint32_t j = 0; j < RTL8139_TX_BUF_SIZE; j++) {
@@ -96,6 +93,7 @@ static void rtl8139_configure(void) {
 
 void rtl8139_init(void) {
     printf("{FG(0,255,255)}Initializing RTL8139 network card...\n");
+    
     pci_init();
     
     pci_device_t* pci_dev = pci_find_device(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID);
