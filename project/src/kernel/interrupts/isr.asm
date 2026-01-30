@@ -1,7 +1,5 @@
 [bits 32]
-
 extern isr_handler
-
 %macro ISR_NOERRCODE 1
 global isr%1
 isr%1:
@@ -10,7 +8,6 @@ isr%1:
     push byte %1
     jmp isr_common_stub
 %endmacro
-
 %macro ISR_ERRCODE 1
 global isr%1
 isr%1:
@@ -18,7 +15,6 @@ isr%1:
     push byte %1
     jmp isr_common_stub
 %endmacro
-
 %macro IRQ 2
 global irq%1
 irq%1:
@@ -27,7 +23,6 @@ irq%1:
     push byte %2
     jmp irq_common_stub
 %endmacro
-
 ISR_NOERRCODE 0
 ISR_NOERRCODE 1
 ISR_NOERRCODE 2
@@ -60,7 +55,6 @@ ISR_NOERRCODE 28
 ISR_NOERRCODE 29
 ISR_ERRCODE   30
 ISR_NOERRCODE 31
-
 IRQ 0, 32
 IRQ 1, 33
 IRQ 2, 34
@@ -77,58 +71,46 @@ IRQ 12, 44
 IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
-
 global isr_common_stub
 isr_common_stub:
     pusha
-    
     mov ax, ds
     push eax
-    
     mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
-    
     push esp
     call isr_handler
     add esp, 4
-    
     pop ebx
     mov ds, bx
     mov es, bx
     mov fs, bx
     mov gs, bx
-    
     popa
     add esp, 8
     sti
     iret
-
 global irq_common_stub
 irq_common_stub:
     pusha
-    
     mov ax, ds
     push eax
-    
     mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
-    
     push esp
     call isr_handler
     add esp, 4
-    
     pop ebx
     mov ds, bx
     mov es, bx
     mov fs, bx
     mov gs, bx
-    
     popa
     add esp, 8
     sti

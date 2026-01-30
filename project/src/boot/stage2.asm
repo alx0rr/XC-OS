@@ -8,13 +8,11 @@ stage2_start:
 load_xcos:
     mov si, loading_xcos_msg
     call prnt
-    
     mov ah, 0x41
     mov bx, 0x55AA
     mov dl, [boot_drive]
     int 0x13
     jc .no_lba_support
-    
     mov si, dap
     mov byte [si], 0x10
     mov byte [si+1], 0
@@ -23,12 +21,10 @@ load_xcos:
     mov word [si+6], 0x1000
     mov dword [si+8], 16
     mov dword [si+12], 0
-    
     mov ah, 0x42
     mov dl, [boot_drive]
     int 0x13
     jc xcos_load_error
-    
     mov si, dap
     mov byte [si], 0x10
     mov byte [si+1], 0
@@ -37,37 +33,27 @@ load_xcos:
     mov word [si+6], 0x4FC0
     mov dword [si+8], 143
     mov dword [si+12], 0
-    
     mov ah, 0x42
     mov dl, [boot_drive]
     int 0x13
     jc xcos_load_error
     jmp .load_success
-    
 .no_lba_support:
     mov si, no_lba_msg
     call prnt
     jmp halt_system
-    
 .load_success:
-    
     mov si, vbe_init_msg
     call prnt
-    
     mov cx, 0x4118
     call init_vbe_mode
-    
     cmp ax, 0x004F
     jne xcos_load_error
-    
     mov si, mmap_init_msg
     call prnt
-    
     call get_memory_map
-    
     cmp eax, 0
     je xcos_load_error
-    
     cli
     lgdt [gdt_descriptor]
     mov eax, cr0
@@ -138,7 +124,6 @@ no_lba_msg: db 'LBA not supported!', 13, 10, 0
 vbe_init_msg: db 'Setting VBE mode... OK', 13, 10, 0
 mmap_init_msg: db 'Getting memory map... OK', 13, 10, 0
 xcos_error_msg: db 13, 10, 'Fatal: Failed to load XCOS!', 13, 10, 'System halted.', 13, 10, 0
-;includes--------
 %include "src/boot/utils/vbe.asm"
 %include "src/boot/utils/mmap.asm"
 times 7680-($-$$) db 0

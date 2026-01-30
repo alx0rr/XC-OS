@@ -1,7 +1,6 @@
 #ifndef CPU_H
 #define CPU_H
 #include <stdint.h>
-
 typedef struct {
     char vendor[13];
     char brand[49];
@@ -15,7 +14,6 @@ typedef struct {
     uint32_t l3_cache;
     uint32_t features;
 } cpu_info_t;
-
 #define CPU_FEATURE_FPU     (1 << 0)
 #define CPU_FEATURE_VME     (1 << 1)
 #define CPU_FEATURE_DE      (1 << 2)
@@ -37,10 +35,8 @@ typedef struct {
 #define CPU_FEATURE_SSE     (1 << 25)
 #define CPU_FEATURE_SSE2    (1 << 26)
 #define CPU_FEATURE_HTT     (1 << 28)
-
 void cpu_init();
 cpu_info_t get_cpu_info();
 void cpu_print_info();
 uint8_t cpu_has_feature(uint32_t feature);
-
 #endif

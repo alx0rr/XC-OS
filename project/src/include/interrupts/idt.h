@@ -1,9 +1,7 @@
 #ifndef IDT_H
 #define IDT_H
 #include <stdint.h>
-
 #define IDT_ENTRIES 256
-
 typedef struct {
     uint16_t offset_low;
     uint16_t selector;
@@ -11,25 +9,21 @@ typedef struct {
     uint8_t flags;
     uint16_t offset_high;
 } __attribute__((packed)) idt_entry_t;
-
 typedef struct {
     uint16_t limit;
     uint32_t base;
 } __attribute__((packed)) idt_ptr_t;
-
 typedef struct {
     uint32_t ds;
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
     uint32_t int_no, err_code;
     uint32_t eip, cs, eflags, useresp, ss;
 } registers_t;
-
 #define IDT_FLAG_PRESENT (1 << 7)
 #define IDT_FLAG_DPL_0 (0 << 5)
 #define IDT_FLAG_DPL_3 (3 << 5)
 #define IDT_FLAG_INTERRUPT (0xE << 0)
 #define IDT_FLAG_TRAP (0xF << 0)
-
 #define INT_DIVIDE_BY_ZERO 0
 #define INT_DEBUG 1
 #define INT_NMI 2
@@ -48,10 +42,8 @@ typedef struct {
 #define INT_ALIGNMENT_CHECK 17
 #define INT_MACHINE_CHECK 18
 #define INT_SIMD_EXCEPTION 19
-
 void idt_init();
 void pic_init();
 void idt_register_exception_handler(uint8_t int_no, void (*handler)(registers_t));
 void idt_register_irq_handler(uint8_t irq_no, void (*handler)(registers_t));
-
 #endif

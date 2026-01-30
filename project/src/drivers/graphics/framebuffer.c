@@ -1,7 +1,5 @@
 #include "../include/graphics/vbe.h"
 #include "../include/graphics/framebuffer.h"
-
-
 void fb_putpixel(uint16_t x, uint16_t y, uint32_t color) {
     vbe_info_t vbe = get_vbe_struct();
     if (x >= vbe.width || y >= vbe.height) return;
@@ -16,14 +14,11 @@ void fb_putpixel(uint16_t x, uint16_t y, uint32_t color) {
         *pixel = color;
     }
 }
-
-
 void fb_fill(uint32_t color) {
     vbe_info_t vbe = get_vbe_struct();
     for (uint32_t y = 0; y < vbe.height; y++)
         for (uint32_t x = 0; x < vbe.width; x++)
             fb_putpixel(x, y, color);
 }
-
 uint16_t fb_get_height() { return vbe_get_height(); }
 uint16_t fb_get_width() { return vbe_get_width(); }

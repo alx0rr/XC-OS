@@ -1,8 +1,6 @@
 #pragma once
 #include <stdint.h>
-
 #define VBE_MODE 0x4118
-
 typedef struct {
     uint16_t mode_attributes;
     uint8_t  window_a_attr;
@@ -38,7 +36,6 @@ typedef struct {
     uint16_t off_screen_mem_size;
     uint8_t  reserved[206];
 } __attribute__((packed)) vbe_mode_info_t;
-
 typedef struct {
     uint16_t width;
     uint16_t height;
@@ -46,9 +43,7 @@ typedef struct {
     uint8_t bpp;
     uint32_t* framebuffer;
 } vbe_info_t;
-
 extern vbe_mode_info_t vbe_mode_info_data;
-
 void vbe_init();
 uint16_t vbe_get_width();
 uint16_t vbe_get_height();

@@ -4,29 +4,22 @@
 #include "../include/memory/vmm.h"
 #include "../lib/io.h"
 #include "../lib/string.h"
-
 #include "demo.c"
 #include "startup.c"
 #include "cmd.c"
-
 void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
     *argc = 0;
-    
     while (input[i] && input[i] == ' ') i++;
-    
     while (input[i] && input[i] != ' ' && j < 63) {
         cmd[j++] = input[i++];
     }
     cmd[j] = '\0';
-    
     while (input[i] && *argc < 16) {
         while (input[i] == ' ') i++;
         if (!input[i]) break;
-        
         args[*argc] = (char*)pmm_malloc(128);
         if (!args[*argc]) break;
-        
         j = 0;
         while (input[i] && input[i] != ' ' && j < 127) {
             args[*argc][j++] = input[i++];
@@ -35,52 +28,43 @@ void parse_command(char* input, char* cmd, char* args[], int* argc) {
         (*argc)++;
     }
 }
-
 void free_args(char* args[], int argc) {
     for (int i = 0; i < argc; i++) {
         if (args[i]) pmm_free(args[i]);
     }
 }
-
 void cmd_ls(int argc, char** argv) {
     const char* path = (argc > 0) ? argv[0] : NULL;
     xcfs_list(path);
 }
-
 void cmd_cd(int argc, char** argv) {
     if (argc < 1) {
         xcfs_chdir("/");
         return;
     }
-    
     if (xcfs_chdir(argv[0]) < 0) {
         printf("{FG(255,0,0)}cd: %s: no such directory\n", argv[0]);
     }
 }
-
 void cmd_pwd() {
     printf("%s\n", xcfs_getcwd());
 }
-
 void cmd_mkdir(int argc, char** argv) {
     if (argc < 1) {
         printf("{FG(255,0,0)}Usage: mkdir <directory>\n");
         return;
     }
-    
     if (xcfs_mkdir(argv[0]) < 0) {
         printf("{FG(255,0,0)}mkdir: cannot create directory '%s'\n", argv[0]);
     } else {
         printf("{FG(0,255,0)}Created directory: %s\n", argv[0]);
     }
 }
-
 void cmd_cat(int argc, char** argv) {
     if (argc < 1) {
         printf("{FG(255,0,0)}Usage: cat <file>\n");
         return;
     }
-    
     uint8_t buffer[8192];
     if (xcfs_read(argv[0], buffer, 8192) == 0) {
         printf("{FG(0,255,0)}");
@@ -92,16 +76,13 @@ void cmd_cat(int argc, char** argv) {
         printf("{FG(255,0,0)}cat: %s: no such file\n", argv[0]);
     }
 }
-
 void cmd_echo(int argc, char** argv) {
     if (argc == 0) {
         printf("\n");
         return;
     }
-    
     int write_mode = 0;
     const char* filename = NULL;
-    
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], ">") == 0 && i + 1 < argc) {
             write_mode = 1;
@@ -110,14 +91,12 @@ void cmd_echo(int argc, char** argv) {
             break;
         }
     }
-    
     if (write_mode && filename) {
         char text[1024] = {0};
         for (int i = 0; i < argc; i++) {
             strcat(text, argv[i]);
             if (i < argc - 1) strcat(text, " ");
         }
-        
         xcfs_delete(filename);
         if (xcfs_create(filename, strlen(text)) == 0) {
             xcfs_write(filename, (uint8_t*)text, strlen(text));
@@ -133,46 +112,38 @@ void cmd_echo(int argc, char** argv) {
         printf("\n");
     }
 }
-
 void cmd_touch(int argc, char** argv) {
     if (argc < 1) {
         printf("{FG(255,0,0)}Usage: touch <file>\n");
         return;
     }
-    
     if (xcfs_create(argv[0], 0) == 0) {
         printf("{FG(0,255,0)}Created: %s\n", argv[0]);
     } else {
         printf("{FG(255,0,0)}touch: cannot create '%s'\n", argv[0]);
     }
 }
-
 void cmd_rm(int argc, char** argv) {
     if (argc < 1) {
         printf("{FG(255,0,0)}Usage: rm <file>\n");
         return;
     }
-    
     if (xcfs_delete(argv[0]) == 0) {
         printf("{FG(0,255,0)}Removed: %s\n", argv[0]);
     } else {
         printf("{FG(255,0,0)}rm: cannot remove '%s'\n", argv[0]);
     }
 }
-
 void cmd_cp(int argc, char** argv) {
     if (argc < 2) {
         printf("{FG(255,0,0)}Usage: cp <source> <dest>\n");
         return;
     }
-    
     uint8_t buffer[8192];
     if (xcfs_read(argv[0], buffer, 8192) == 0) {
         xcfs_delete(argv[1]);
-        
         uint32_t size = 0;
         for (int i = 0; i < 8192 && buffer[i]; i++) size++;
-        
         if (xcfs_create(argv[1], size) == 0) {
             xcfs_write(argv[1], buffer, size);
             printf("{FG(0,255,0)}Copied: %s -> %s\n", argv[0], argv[1]);
@@ -183,27 +154,22 @@ void cmd_cp(int argc, char** argv) {
         printf("{FG(255,0,0)}cp: cannot read '%s'\n", argv[0]);
     }
 }
-
 void cmd_mv(int argc, char** argv) {
     if (argc < 2) {
         printf("{FG(255,0,0)}Usage: mv <source> <dest>\n");
         return;
     }
-    
     cmd_cp(argc, argv);
     if (xcfs_delete(argv[0]) != 0) {
         printf("{FG(255,165,0)}Warning: could not remove source file\n");
     }
 }
-
 void cmd_uname() {
     printf("XC-OS v0.3 i386 (XCFS v2)\n");
 }
-
 void cmd_free() {
     pmm_print_stats();
 }
-
 void help() {
     printf("{FG(0,255,255)}=== System Commands ===\n");
     printf("  {FG(255,255,0)}help{FG(255,255,255)}      - Show this help\n");
@@ -245,27 +211,20 @@ void help() {
     printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
     printf("\n");
 }
-
 void kernel_main() {
     startup();
     printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS v0.3{FG(0,255,0)}\n");
     printf("\nType '{FG(255,255,0)}help{FG(255,255,255)}' for available commands\n\n");
-    
     while (1) {
         const char* cwd = xcfs_getcwd();
         printf("{FG(194,122,255)}root@xcos{FG(255,255,255)}:{FG(100,200,255)}%s{FG(255,255,255)}$ ", cwd);
-        
         char* input = keyboard_input();
         printf("\n");
-        
         if (strlen(input) == 0) continue;
-        
         char cmd[64] = {0};
         char* args[16] = {0};
         int argc = 0;
-        
         parse_command(input, cmd, args, &argc);
-        
         if (strcmp(cmd, "clear") == 0) {
             clear();
         }
@@ -356,7 +315,6 @@ void kernel_main() {
         else if (strlen(cmd) > 0) {
             printf("{FG(255,0,0)}%s: command not found\n", cmd);
         }
-        
         free_args(args, argc);
     }
 }

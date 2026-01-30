@@ -1,6 +1,4 @@
 #include "string.h"
-
-
 size_t strlen(const char* str) {
     size_t len = 0;
     while (str[len] != '\0') {
@@ -8,8 +6,6 @@ size_t strlen(const char* str) {
     }
     return len;
 }
-
-
 char* strcpy(char* to_here, const char* from_here) {
     char* dest = to_here;
     while (*from_here != '\0') {
@@ -17,10 +13,9 @@ char* strcpy(char* to_here, const char* from_here) {
         to_here++;
         from_here++;
     }
-    *to_here = '\0'; 
+    *to_here = '\0';
     return dest;
 }
-
 char* strncpy(char* to_here, const char* from_here, size_t len) {
     char* dest = to_here;
     while (len > 0 && *from_here != '\0') {
@@ -30,14 +25,12 @@ char* strncpy(char* to_here, const char* from_here, size_t len) {
         len--;
     }
     while (len > 0) {
-        *to_here = '\0'; 
+        *to_here = '\0';
         to_here++;
         len--;
     }
     return dest;
 }
-
-
 int strcmp(const char* str1, const char* str2) {
     while (*str1 != '\0' && *str2 != '\0') {
         if (*str1 != *str2) {
@@ -46,9 +39,8 @@ int strcmp(const char* str1, const char* str2) {
         str1++;
         str2++;
     }
-    return (*str1 - *str2);  
+    return (*str1 - *str2);
 }
-
 int strncmp(const char* str1, const char* str2, size_t len) {
     while (len > 0 && *str1 != '\0' && *str2 != '\0') {
         if (*str1 != *str2) {
@@ -61,22 +53,19 @@ int strncmp(const char* str1, const char* str2, size_t len) {
     if (len > 0) {
         return (*str1 - *str2);
     }
-    return 0;  
+    return 0;
 }
-
-
 void strcat(char* dest, const char* src) {
     while (*dest != '\0') {
-        dest++;  
+        dest++;
     }
     while (*src != '\0') {
         *dest = *src;
         dest++;
         src++;
     }
-    *dest = '\0';  
+    *dest = '\0';
 }
-
 char* strchr(const char* s, int c) {
     while (*s != '\0') {
         if (*s == c) {
@@ -86,20 +75,16 @@ char* strchr(const char* s, int c) {
     }
     return NULL;
 }
-
-
 char* strrchr(const char* s, int c) {
     const char* last = NULL;
     while (*s != '\0') {
         if (*s == c) {
-            last = s; 
+            last = s;
         }
         s++;
     }
-    return (char*)last; 
+    return (char*)last;
 }
-
-
 void* memcpy(void* dest, const void* src, size_t n) {
     unsigned char* d = dest;
     const unsigned char* s = src;
@@ -110,8 +95,6 @@ void* memcpy(void* dest, const void* src, size_t n) {
     }
     return dest;
 }
-
-
 void* memmove(void* dest, const void* src, size_t n) {
     unsigned char* d = dest;
     const unsigned char* s = src;
@@ -130,8 +113,6 @@ void* memmove(void* dest, const void* src, size_t n) {
     }
     return dest;
 }
-
-
 void* memset(void* dest, int value, size_t size) {
     unsigned char* d = (unsigned char*)dest;
     unsigned char v = (unsigned char)value;
@@ -141,8 +122,6 @@ void* memset(void* dest, int value, size_t size) {
     }
     return dest;
 }
-
-
 int memcmp(const char* s1, const char* s2, size_t n) {
     while (n--) {
         if (*s1 != *s2) {
@@ -153,15 +132,12 @@ int memcmp(const char* s1, const char* s2, size_t n) {
     }
     return 0;
 }
-
-
 void itoa (char *buf, int base, int d)
 {
   char *p = buf;
   char *p1, *p2;
   unsigned long ud = d;
   int divisor = 10;
-
   if (base == 'd' && d < 0)
     {
       *p++ = '-';
@@ -170,20 +146,13 @@ void itoa (char *buf, int base, int d)
     }
   else if (base == 'x')
     divisor = 16;
-
-
   do
     {
       int remainder = ud % divisor;
-      
       *p++ = (remainder < 10) ? remainder + '0' : remainder + 'a' - 10;
     }
   while (ud /= divisor);
-
-
   *p = 0;
-  
-
   p1 = buf;
   p2 = p - 1;
   while (p1 < p2)
@@ -195,12 +164,10 @@ void itoa (char *buf, int base, int d)
       p2--;
     }
 }
-
 int vsnprintf(char *str, size_t size, const char *format, va_list args) {
     char *out = str, *end = str + size - 1;
     const char *p = format;
     char buf[32];
-
     while (*p) {
         if (*p != '%') {
             if (out < end) *out++ = *p++;
@@ -233,7 +200,6 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args) {
     *out = '\0';
     return (out - str);
 }
-
 int snprintf(char *str, size_t size, const char *format, ...) {
     va_list args;
     va_start(args, format);

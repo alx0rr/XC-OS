@@ -1,10 +1,8 @@
 #include "../../include/interrupts/idt.h"
 #include "../../lib/io.h"
 #include "../../include/text.h"
-
 static idt_entry_t idt[IDT_ENTRIES];
 static idt_ptr_t idt_ptr;
-
 extern void isr0();
 extern void isr1();
 extern void isr2();
@@ -37,7 +35,6 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
-
 extern void irq0();
 extern void irq1();
 extern void irq2();
@@ -54,10 +51,8 @@ extern void irq12();
 extern void irq13();
 extern void irq14();
 extern void irq15();
-
 typedef void (*irq_handler_t)(registers_t);
 static irq_handler_t irq_handlers[16] = {0};
-
 static void idt_set_gate(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flags) {
     idt[n].offset_low = handler & 0xFFFF;
     idt[n].offset_high = (handler >> 16) & 0xFFFF;
@@ -65,13 +60,11 @@ static void idt_set_gate(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flag
     idt[n].zero = 0;
     idt[n].flags = flags;
 }
-
 void idt_register_irq_handler(uint8_t irq_no, irq_handler_t handler) {
     if (irq_no < 16) {
         irq_handlers[irq_no] = handler;
     }
 }
-
 void pic_init() {
     outb(0x20, 0x11);
     outb(0xA0, 0x11);
@@ -84,15 +77,12 @@ void pic_init() {
     outb(0x21, 0xFD);
     outb(0xA1, 0xFF);
 }
-
 void idt_init() {
     idt_ptr.limit = sizeof(idt) - 1;
     idt_ptr.base = (uint32_t)&idt;
-    
     for (int i = 0; i < IDT_ENTRIES; i++) {
         idt_set_gate(i, 0, 0, 0);
     }
-    
     idt_set_gate(0, (uint32_t)isr0, 0x08, 0x8E);
     idt_set_gate(1, (uint32_t)isr1, 0x08, 0x8E);
     idt_set_gate(2, (uint32_t)isr2, 0x08, 0x8E);
@@ -125,7 +115,6 @@ void idt_init() {
     idt_set_gate(29, (uint32_t)isr29, 0x08, 0x8E);
     idt_set_gate(30, (uint32_t)isr30, 0x08, 0x8E);
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
-    
     idt_set_gate(32, (uint32_t)irq0, 0x08, 0x8E);
     idt_set_gate(33, (uint32_t)irq1, 0x08, 0x8E);
     idt_set_gate(34, (uint32_t)irq2, 0x08, 0x8E);
@@ -142,22 +131,18 @@ void idt_init() {
     idt_set_gate(45, (uint32_t)irq13, 0x08, 0x8E);
     idt_set_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
-    
     asm volatile("lidt %0" : : "m"(idt_ptr));
     asm volatile("sti");
 }
-
 void isr_handler(registers_t *regs) {
     if (regs->int_no < 32) {
         printf("{FG(255,0,0)}Exception %u at EIP=0x%x\n", regs->int_no, regs->eip);
         asm volatile("cli; hlt");
     } else if (regs->int_no >= 32 && regs->int_no < 48) {
         uint8_t irq_no = regs->int_no - 32;
-        
         if (irq_handlers[irq_no]) {
             irq_handlers[irq_no](*regs);
         }
-        
         if (regs->int_no >= 40) {
             outb(0xA0, 0x20);
         }
