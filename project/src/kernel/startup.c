@@ -7,6 +7,7 @@
 #include "../include/storage/ata.h"
 #include "../include/fs/xcfs.h"
 #include "../include/input/keyboard.h"
+#include "../include/scheduler/scheduler.h"
 void startup() {
     vbe_init();
     text_init();
@@ -28,5 +29,7 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} ATA Driver initialized\n");
     xcfs_init(0);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS File System initialized\n");
+    scheduler_init();
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Task Scheduler initialized\n");
     printf("\n");
 }

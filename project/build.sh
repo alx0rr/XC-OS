@@ -80,6 +80,10 @@ echo "Compiling XCFS v2..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/fs/xcfs.c -o $build_dir/xcfs.o
 [ $? -ne 0 ] && echo "Error compiling XCFS" && exit 1
 
+echo "Compiling Task Scheduler..."
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/scheduler/scheduler.c -o $build_dir/scheduler.o
+[ $? -ne 0 ] && echo "Error compiling Scheduler" && exit 1
+
 echo "Compiling Kernel..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $kernel_src/kernel.c -o $build_dir/kernel.o
 [ $? -ne 0 ] && echo "Error compiling Kernel" && exit 1
@@ -90,7 +94,7 @@ ld -m elf_i386 -T "$src_dir/linker.ld" -o "$build_dir/kernel.bin" \
     "$build_dir/pmm.o" "$build_dir/vmm.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
     "$build_dir/string.o" "$build_dir/keyboard.o" "$build_dir/time.o" \
     "$build_dir/random.o" "$build_dir/cpu.o" "$build_dir/idt.o" \
-    "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o"
+    "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o" "$build_dir/scheduler.o"
 [ $? -ne 0 ] && echo "Error linking Kernel" && exit 1
 
 KERNEL_SIZE=$(($KERNEL_SIZE_SECTORS * 512))

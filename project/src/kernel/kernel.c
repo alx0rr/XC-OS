@@ -2,11 +2,13 @@
 #include "../include/input/keyboard.h"
 #include "../include/fs/xcfs.h"
 #include "../include/memory/vmm.h"
+#include "../include/scheduler/scheduler.h"
 #include "../lib/io.h"
 #include "../lib/string.h"
 #include "demo.c"
 #include "startup.c"
 #include "cmd.c"
+#include "multitasking_demo.c"
 void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
     *argc = 0;
@@ -180,10 +182,9 @@ void help() {
     printf("  {FG(255,255,0)}free{FG(255,255,255)}      - Memory usage\n");
     printf("  {FG(255,255,0)}meminfo{FG(255,255,255)}   - Detailed memory info\n");
     printf("  {FG(255,255,0)}vmmstat{FG(255,255,255)}   - Virtual memory stats\n");
-    printf("  {FG(255,255,0)}enablepaging{FG(255,255,255)} - Enable paging\n");
     printf("  {FG(255,255,0)}cpu{FG(255,255,255)}       - CPU information\n");
     printf("  {FG(255,255,0)}uptime{FG(255,255,255)}    - System uptime\n");
-    printf("  {FG(255,255,0)}clock{FG(255,255,255)}     - Full-screen clock\n");
+    printf("  {FG(255,255,0)}clock{FG(255,255,255)}     - Show date and time\n");
     printf("\n");
     printf("{FG(0,255,255)}=== Directory Commands ===\n");
     printf("  {FG(255,255,0)}ls{FG(255,255,255)} [dir]  - List files\n");
@@ -206,6 +207,10 @@ void help() {
     printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
     printf("  {FG(255,255,0)}vmmtest{FG(255,255,255)}   - VMM test suite\n");
     printf("  {FG(255,255,0)}bench{FG(255,255,255)}     - System benchmark\n");
+    printf("\n");
+    printf("{FG(0,255,255)}=== Multitasking Commands ===\n");
+    printf("  {FG(255,255,0)}ps{FG(255,255,255)}        - List all tasks\n");
+    printf("  {FG(255,255,0)}taskdemo{FG(255,255,255)}  - Run multitasking demo\n");
     printf("\n");
     printf("{FG(0,255,255)}=== Other Commands ===\n");
     printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
@@ -270,11 +275,6 @@ void kernel_main() {
         else if (strcmp(cmd, "vmmstat") == 0) {
             vmm_print_stats();
         }
-        else if (strcmp(cmd, "enablepaging") == 0) {
-            printf("{FG(255,255,0)}Enabling paging...\n");
-            vmm_enable_paging();
-            printf("{FG(0,255,0)}Paging enabled successfully\n");
-        }
         else if (strcmp(cmd, "cpu") == 0) {
             cpu_print_info();
         }
@@ -307,6 +307,12 @@ void kernel_main() {
         }
         else if (strcmp(cmd, "uptime") == 0) {
             cmd_uptime();
+        }
+        else if (strcmp(cmd, "ps") == 0) {
+            scheduler_print_tasks();
+        }
+        else if (strcmp(cmd, "taskdemo") == 0) {
+            demo_multitasking();
         }
         else if (strcmp(cmd, "reboot") == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");

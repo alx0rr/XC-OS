@@ -176,67 +176,13 @@ static const char* days[] = {
     "Thursday", "Friday", "Saturday"
 };
 void cmd_clock() {
-    uint16_t width = vbe_get_width();
-    uint16_t height = vbe_get_height();
-    uint32_t old_bg = bg_color;
-    uint32_t old_fg = fg_color;
-    uint8_t old_scale = text_get_scale();
-    clear();
-    printf("{FG(255,255,0)}Clock Mode - Press CTRL+C to exit\n\n");
-    text_set_scale(3);
-    while (1) {
-        datetime_t dt = time_get_datetime();
-        char time_str[32];
-        char date_str[64];
-        time_str[0] = '0' + (dt.hour / 10);
-        time_str[1] = '0' + (dt.hour % 10);
-        time_str[2] = ':';
-        time_str[3] = '0' + (dt.minute / 10);
-        time_str[4] = '0' + (dt.minute % 10);
-        time_str[5] = ':';
-        time_str[6] = '0' + (dt.second / 10);
-        time_str[7] = '0' + (dt.second % 10);
-        time_str[8] = '\0';
-        strcpy(date_str, months[dt.month]);
-        strcat(date_str, " ");
-        char day_buf[3];
-        day_buf[0] = '0' + (dt.day / 10);
-        day_buf[1] = '0' + (dt.day % 10);
-        day_buf[2] = '\0';
-        strcat(date_str, day_buf);
-        strcat(date_str, ", ");
-        char year_buf[5];
-        year_buf[0] = '0' + (dt.year / 1000);
-        year_buf[1] = '0' + ((dt.year / 100) % 10);
-        year_buf[2] = '0' + ((dt.year / 10) % 10);
-        year_buf[3] = '0' + (dt.year % 10);
-        year_buf[4] = '\0';
-        strcat(date_str, year_buf);
-        uint16_t time_x = (width / 2) - (strlen(time_str) * 24 * 3 / 2);
-        uint16_t time_y = (height / 2) - 60;
-        uint16_t date_x = (width / 2) - (strlen(date_str) * 24 * 2 / 2);
-        uint16_t date_y = (height / 2) + 30;
-        for (uint16_t y = time_y - 10; y < time_y + 100; y++) {
-            for (uint16_t x = 0; x < width; x++) {
-                uint32_t* fb = (uint32_t*)vbe_get_framebuffer();
-                fb[y * width + x] = 0x000000;
-            }
-        }
-        print_at_pos(time_str, time_x, time_y, 0x00FF00, 0x000000);
-        text_set_scale(2);
-        print_at_pos(date_str, date_x, date_y, 0xFFFF00, 0x000000);
-        text_set_scale(3);
-        for (uint32_t delay = 0; delay < 10000000; delay++) {
-            if (ctrl_pressed) {
-                text_set_scale(old_scale);
-                bg_color = old_bg;
-                fg_color = old_fg;
-                clear();
-                return;
-            }
-            asm volatile("pause");
-        }
-    }
+    datetime_t dt = time_get_datetime();
+    
+    printf("{FG(0,255,255)}Current Date & Time:\n");
+    printf("{FG(255,255,0)}  Date: %s %02u, %u\n", 
+           months[dt.month], dt.day, dt.year);
+    printf("{FG(0,255,0)}  Time: %02u:%02u:%02u\n\n", 
+           dt.hour, dt.minute, dt.second);
 }
 void cmd_tree(int argc, char** argv) {
     printf("{FG(255,255,0)}Directory Tree\n");
