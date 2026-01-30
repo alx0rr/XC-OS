@@ -51,13 +51,15 @@ void bitmapblt(
 	uint16_t yy = y;
 	for (uint32_t j = 0; j < h; j++) {
 		xx = x;
-		for (uint32_t i = 0x0800; i > 0; i >>= 1) {
-			if (i & *bitpattern) {
+		uint16_t mask = 0x0800;
+		for (uint32_t i = 0; i < 12; i++) {
+			if (mask & *bitpattern) {
 				fb_putpixel(xx, yy, fore_color);
 			} else {
 				fb_putpixel(xx, yy, back_color);
 			}
 			xx++;
+			mask >>= 1;
 		}
 		bitpattern++;
 		yy++;
