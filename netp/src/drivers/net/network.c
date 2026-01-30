@@ -11,6 +11,7 @@ static arp_entry_t* arp_cache_head = NULL;
 static nat_entry_t* nat_table_head = NULL;
 static tcp_connection_t* tcp_connections_head = NULL;
 static uint16_t next_source_port = 49152;
+static uint8_t network_initialized = 0;
 
 static inline uint16_t htons(uint16_t hostshort) {
     return ((hostshort & 0xFF) << 8) | ((hostshort >> 8) & 0xFF);
@@ -79,10 +80,12 @@ void network_init(void) {
     net_config.nat_enabled = 1;
     net_config.dhcp_enabled = 0;
     
+    network_initialized = 1;
     printf("{FG(0,255,0)}Network stack initialized with NAT support\n");
 }
 
 static arp_entry_t* arp_cache_find(uint32_t ip) {
+    if (!network_initialized) return NULL;
     arp_entry_t* entry = arp_cache_head;
     while (entry) {
         if (entry->valid && entry->ip == ip) {
@@ -94,6 +97,8 @@ static arp_entry_t* arp_cache_find(uint32_t ip) {
 }
 
 static void arp_cache_add(uint32_t ip, const uint8_t* mac) {
+    if (!network_initialized) return;
+    
     arp_entry_t* entry = arp_cache_find(ip);
     
     if (!entry) {
@@ -110,11 +115,13 @@ static void arp_cache_add(uint32_t ip, const uint8_t* mac) {
 }
 
 uint8_t* network_arp_lookup(uint32_t ip) {
+    if (!network_initialized) return NULL;
     arp_entry_t* entry = arp_cache_find(ip);
     return entry ? entry->mac : NULL;
 }
 
 static nat_entry_t* nat_find_entry(uint32_t internal_ip, uint16_t internal_port, uint8_t protocol) {
+    if (!network_initialized) return NULL;
     nat_entry_t* entry = nat_table_head;
     while (entry) {
         if (entry->valid && entry->internal_ip == internal_ip && 
@@ -127,6 +134,8 @@ static nat_entry_t* nat_find_entry(uint32_t internal_ip, uint16_t internal_port,
 }
 
 static nat_entry_t* nat_create_entry(uint32_t internal_ip, uint16_t internal_port, uint8_t protocol) {
+    if (!network_initialized) return NULL;
+    
     nat_entry_t* entry = (nat_entry_t*)pmm_malloc(sizeof(nat_entry_t));
     if (!entry) return NULL;
     
@@ -183,6 +192,7 @@ static void handle_arp_packet(const uint8_t* data, uint32_t len) {
 }
 
 static tcp_connection_t* tcp_find_connection(uint32_t remote_ip, uint16_t local_port, uint16_t remote_port) {
+    if (!network_initialized) return NULL;
     tcp_connection_t* conn = tcp_connections_head;
     while (conn) {
         if (conn->remote_ip == remote_ip && conn->local_port == local_port && 
@@ -246,9 +256,6 @@ static void handle_udp_packet(const uint8_t* data, uint32_t len, uint32_t src_ip
     uint16_t src_port = ntohs(udp->src_port);
     uint16_t dest_port = ntohs(udp->dest_port);
     uint16_t udp_len = ntohs(udp->length);
-    
-    if (dest_port == DNS_PORT) {
-    }
 }
 
 static void handle_icmp_packet(const uint8_t* data, uint32_t len, uint32_t src_ip) {
@@ -257,25 +264,26 @@ static void handle_icmp_packet(const uint8_t* data, uint32_t len, uint32_t src_i
     icmp_header_t* icmp = (icmp_header_t*)data;
     
     if (icmp->type == ICMP_ECHO_REQUEST) {
-        uint8_t reply_buf[sizeof(ethernet_frame_t) + sizeof(ipv4_header_t) + len];
-        ethernet_frame_t* eth = (ethernet_frame_t*)reply_buf;
-        ipv4_header_t* ip = (ipv4_header_t*)eth->payload;
-        icmp_header_t* reply_icmp = (icmp_header_t*)(ip + 1);
+        uint16_t id = ntohs(icmp->identifier);
+        uint16_t seq = ntohs(icmp->sequence);
         
         uint8_t* dest_mac = network_arp_lookup(src_ip);
-        if (!dest_mac) {
-            network_send_arp_request(src_ip);
-            return;
-        }
+        if (!dest_mac) return;
         
-        memcpy(eth->dest_mac, dest_mac, 6);
-        memcpy(eth->src_mac, net_config.mac_addr, 6);
-        eth->ethertype = htons(ETHERTYPE_IPV4);
+        uint8_t packet[sizeof(ipv4_header_t) + len];
+        ipv4_header_t* ip = (ipv4_header_t*)packet;
+        icmp_header_t* reply = (icmp_header_t*)(ip + 1);
+        
+        memcpy(reply, icmp, len);
+        reply->type = ICMP_ECHO_REPLY;
+        reply->code = 0;
+        reply->checksum = 0;
+        reply->checksum = network_checksum(reply, len);
         
         ip->version_ihl = 0x45;
         ip->tos = 0;
-        ip->total_length = htons(sizeof(ipv4_header_t) + len);
-        ip->identification = 0;
+        ip->total_length = htons(sizeof(packet));
+        ip->identification = htons(get_ticks() & 0xFFFF);
         ip->flags_fragment = 0;
         ip->ttl = 64;
         ip->protocol = IP_PROTO_ICMP;
@@ -284,13 +292,7 @@ static void handle_icmp_packet(const uint8_t* data, uint32_t len, uint32_t src_i
         ip->dest_ip = htonl(src_ip);
         ip->checksum = network_checksum(ip, sizeof(ipv4_header_t));
         
-        memcpy(reply_icmp, icmp, len);
-        reply_icmp->type = ICMP_ECHO_REPLY;
-        reply_icmp->checksum = 0;
-        reply_icmp->checksum = network_checksum(reply_icmp, len);
-        
-        rtl8139_send_packet(reply_buf, sizeof(reply_buf));
-        net_stats.tx_packets++;
+        network_send_ethernet(dest_mac, ETHERTYPE_IPV4, packet, sizeof(packet));
     }
 }
 
@@ -298,23 +300,18 @@ static void handle_ip_packet(const uint8_t* data, uint32_t len) {
     if (len < sizeof(ipv4_header_t)) return;
     
     ipv4_header_t* ip = (ipv4_header_t*)data;
-    
-    if ((ip->version_ihl >> 4) != 4) return;
+    uint32_t src_ip = ntohl(ip->src_ip);
+    uint32_t dest_ip = ntohl(ip->dest_ip);
+    uint8_t protocol = ip->protocol;
     
     uint32_t header_len = (ip->version_ihl & 0x0F) * 4;
-    uint32_t total_len = ntohs(ip->total_length);
+    if (header_len < sizeof(ipv4_header_t)) return;
+    if (len < header_len) return;
     
-    if (total_len > len || header_len > total_len) return;
+    const uint8_t* payload = data + header_len;
+    uint32_t payload_len = len - header_len;
     
-    uint32_t dest_ip = ntohl(ip->dest_ip);
-    uint32_t src_ip = ntohl(ip->src_ip);
-    
-    if (dest_ip != net_config.ip_addr && !net_config.nat_enabled) return;
-    
-    uint8_t* payload = (uint8_t*)ip + header_len;
-    uint32_t payload_len = total_len - header_len;
-    
-    switch (ip->protocol) {
+    switch (protocol) {
         case IP_PROTO_ICMP:
             handle_icmp_packet(payload, payload_len, src_ip);
             break;
@@ -328,25 +325,29 @@ static void handle_ip_packet(const uint8_t* data, uint32_t len) {
 }
 
 void network_process_packet(const uint8_t* data, uint32_t len) {
+    if (!network_initialized) return;
     if (len < sizeof(ethernet_frame_t)) return;
-    
-    ethernet_frame_t* eth = (ethernet_frame_t*)data;
-    uint16_t ethertype = ntohs(eth->ethertype);
     
     net_stats.rx_packets++;
     net_stats.rx_bytes += len;
     
+    ethernet_frame_t* frame = (ethernet_frame_t*)data;
+    uint16_t ethertype = ntohs(frame->ethertype);
+    
     switch (ethertype) {
-        case ETHERTYPE_ARP:
-            handle_arp_packet(eth->payload, len - sizeof(ethernet_frame_t));
-            break;
         case ETHERTYPE_IPV4:
-            handle_ip_packet(eth->payload, len - sizeof(ethernet_frame_t));
+            handle_ip_packet(frame->payload, len - sizeof(ethernet_frame_t));
+            break;
+        case ETHERTYPE_ARP:
+            handle_arp_packet(frame->payload, len - sizeof(ethernet_frame_t));
             break;
     }
 }
 
 int network_send_ethernet(const uint8_t* dest_mac, uint16_t ethertype, const void* payload, uint32_t len) {
+    if (!network_initialized) return -1;
+    if (len > 1500) return -1;
+    
     uint8_t frame[sizeof(ethernet_frame_t) + len];
     ethernet_frame_t* eth = (ethernet_frame_t*)frame;
     
@@ -364,6 +365,8 @@ int network_send_ethernet(const uint8_t* dest_mac, uint16_t ethertype, const voi
 }
 
 void network_send_arp_request(uint32_t target_ip) {
+    if (!network_initialized) return;
+    
     arp_packet_t arp;
     
     arp.hw_type = htons(1);
@@ -381,6 +384,8 @@ void network_send_arp_request(uint32_t target_ip) {
 }
 
 int network_send_ip(uint32_t dest_ip, uint8_t protocol, const void* payload, uint32_t len) {
+    if (!network_initialized) return -1;
+    
     uint32_t gateway_ip = ((dest_ip & net_config.subnet_mask) == (net_config.ip_addr & net_config.subnet_mask)) 
                           ? dest_ip : net_config.gateway;
     
@@ -411,6 +416,8 @@ int network_send_ip(uint32_t dest_ip, uint8_t protocol, const void* payload, uin
 }
 
 int network_send_udp(uint32_t dest_ip, uint16_t src_port, uint16_t dest_port, const void* data, uint32_t len) {
+    if (!network_initialized) return -1;
+    
     uint8_t packet[sizeof(udp_header_t) + len];
     udp_header_t* udp = (udp_header_t*)packet;
     
@@ -425,6 +432,8 @@ int network_send_udp(uint32_t dest_ip, uint16_t src_port, uint16_t dest_port, co
 
 int network_send_tcp(uint32_t dest_ip, uint16_t src_port, uint16_t dest_port, uint8_t flags, 
                      uint32_t seq, uint32_t ack, const void* data, uint32_t len) {
+    if (!network_initialized) return -1;
+    
     uint8_t packet[sizeof(tcp_header_t) + len];
     tcp_header_t* tcp = (tcp_header_t*)packet;
     
@@ -443,6 +452,8 @@ int network_send_tcp(uint32_t dest_ip, uint16_t src_port, uint16_t dest_port, ui
 }
 
 void network_send_ping(uint32_t dest_ip, uint16_t seq) {
+    if (!network_initialized) return;
+    
     uint8_t* dest_mac = network_arp_lookup(dest_ip);
     if (!dest_mac) {
         network_send_arp_request(dest_ip);
@@ -481,6 +492,8 @@ void network_send_ping(uint32_t dest_ip, uint16_t seq) {
 }
 
 tcp_connection_t* network_tcp_connect(uint32_t dest_ip, uint16_t dest_port) {
+    if (!network_initialized) return NULL;
+    
     tcp_connection_t* conn = (tcp_connection_t*)pmm_malloc(sizeof(tcp_connection_t));
     if (!conn) return NULL;
     
@@ -558,6 +571,8 @@ void network_enable_nat(uint8_t enable) {
 }
 
 void network_dhcp_request(void) {
+    if (!network_initialized) return;
+    
     dhcp_packet_t dhcp;
     memset(&dhcp, 0, sizeof(dhcp_packet_t));
     
