@@ -1,7 +1,7 @@
-#include "../../include/text.h"
 #include "../../include/graphics/framebuffer.h"
 #include "../../include/font.h"
 #include "../../lib/string.h"
+#include "../../include/text.h"
 #define RGB(r, g, b)       ((uint32_t)(((r) << 16) | ((g) << 8) | (b)))
 #define RGBA(r, g, b, a)   ((uint32_t)(((r) << 16) | ((g) << 8) | (b) | ((a) << 24)))
 #define R_PART(color) (((color) >> 16) & 0xFF)
@@ -42,7 +42,7 @@ void bitmapblt(
 	uint16_t x,
 	uint16_t y,
 	uint8_t h,
-	const uint16_t* bitpattern,
+	uint8_t* bitpattern,
 	uint32_t fore_color,
 	uint32_t back_color
 )
@@ -51,15 +51,13 @@ void bitmapblt(
 	uint16_t yy = y;
 	for (uint32_t j = 0; j < h; j++) {
 		xx = x;
-		uint16_t mask = 0x0800;
-		for (uint32_t i = 0; i < 12; i++) {
-			if (mask & *bitpattern) {
+		for (uint32_t i = 128; i > 0; i >>= 1) {
+			if (i & *bitpattern) {
 				fb_putpixel(xx, yy, fore_color);
 			} else {
 				fb_putpixel(xx, yy, back_color);
 			}
 			xx++;
-			mask >>= 1;
 		}
 		bitpattern++;
 		yy++;
@@ -73,11 +71,11 @@ void drawchar_at_pos(
 	uint32_t back_color
 )
 {
-	bitmapblt(x, y, FONT_HEIGHT, &font_12x16[(uint32_t)c * FONT_HEIGHT], fore_color, back_color);
+	bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color);
 }
 void putchar(char c) {
-	uint16_t char_width = FONT_WIDTH;
-	uint16_t char_height = FONT_HEIGHT + 2;
+	uint16_t char_width = 8;
+	uint16_t char_height = 14;
 	if (c == '\n') {
 		xpos = 0;
 		ypos += char_height;
