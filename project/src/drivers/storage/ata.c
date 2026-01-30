@@ -48,6 +48,8 @@ static void ata_wait_irq(void) {
 }
 
 static int ata_detect(uint16_t io_base, uint16_t ctrl_base, uint8_t master) {
+    outb(ctrl_base, 0x02);
+    
     outb(io_base + ATA_REG_DRIVE, master ? ATA_MASTER : ATA_SLAVE);
     ata_delay(io_base);
     
@@ -56,10 +58,12 @@ static int ata_detect(uint16_t io_base, uint16_t ctrl_base, uint8_t master) {
     
     uint8_t status = inb(io_base + ATA_REG_STATUS);
     if(status == 0) {
+        outb(ctrl_base, 0x00);
         return 0;
     }
     
     if(ata_wait(io_base, ATA_SR_DRQ, ATA_SR_DRQ, 100000) < 0) {
+        outb(ctrl_base, 0x00);
         return 0;
     }
     
@@ -67,6 +71,7 @@ static int ata_detect(uint16_t io_base, uint16_t ctrl_base, uint8_t master) {
     for(int i = 0; i < 256; i++)
         data[i] = inw(io_base + ATA_REG_DATA);
     
+    outb(ctrl_base, 0x00);
     return 1;
 }
 
@@ -78,6 +83,9 @@ void ata_init(void) {
     mask &= ~(1 << 6);
     mask &= ~(1 << 7);
     outb(0xA1, mask);
+    
+    outb(ATA_PRIMARY_CTRL, 0x02);
+    outb(ATA_SECONDARY_CTRL, 0x02);
     
     ata_devices[0].io_base = ATA_PRIMARY_IO;
     ata_devices[0].ctrl_base = ATA_PRIMARY_CTRL;
@@ -98,6 +106,9 @@ void ata_init(void) {
     ata_devices[3].ctrl_base = ATA_SECONDARY_CTRL;
     ata_devices[3].master = 0;
     ata_devices[3].exists = ata_detect(ATA_SECONDARY_IO, ATA_SECONDARY_CTRL, 0);
+    
+    outb(ATA_PRIMARY_CTRL, 0x00);
+    outb(ATA_SECONDARY_CTRL, 0x00);
 }
 
 int ata_read_sector(uint8_t drive, uint32_t lba, uint8_t* buffer) {
