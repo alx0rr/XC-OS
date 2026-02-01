@@ -119,7 +119,7 @@ boot_drive: db 0x80
 align 4
 dap:
     times 16 db 0
-loading_xcos_msg: db 'Like a rolling stones... OK', 13, 10, 13, 10, 'Loading XC OS... OK', 13, 10, 0
+loading_xcos_msg: db 'P.S CAM (AYA)... OK', 13, 10, 13, 10, 'Loading XC OS... OK', 13, 10, 0
 no_lba_msg: db 'LBA not supported!', 13, 10, 0
 vbe_init_msg: db 'Setting VBE mode... OK', 13, 10, 0
 mmap_init_msg: db 'Getting memory map... OK', 13, 10, 0

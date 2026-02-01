@@ -1,3 +1,4 @@
+/* /ᐠ - ˕ -マ */
 #include "../include/graphics/vbe.h"
 #include "../include/text.h"
 #include "../include/memory/pmm.h"

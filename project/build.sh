@@ -8,7 +8,7 @@ drivers_src="$src_dir/drivers"
 includes_src="$src_dir/include"
 lib_src="$src_dir/lib"
 
-IMAGE_SIZE_MB=64
+IMAGE_SIZE_MB=12
 KERNEL_SIZE_SECTORS=255
 
 echo "Building XC-OS..."

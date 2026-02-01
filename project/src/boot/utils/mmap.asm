@@ -1,3 +1,6 @@
+; Fuck yeah
+; /ᐠ - ˕ -マ
+; Booga Booga im forget about asm comments
 [bits 16]
 MMAP_ADDR equ 0x8000
 COUNT_ADDR equ 0x7FFC
