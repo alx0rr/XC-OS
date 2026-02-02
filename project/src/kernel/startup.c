@@ -38,6 +38,7 @@ void startup() {
         printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Video Back Buffer initialized\n");
         task_create("System FB Swap", fb_swap_task, 0); //after fix delete swap from printf
         printf("{FG(0,255,0)}[OK]{FG(255,255,255)} FB Swap task created\n");
+        scheduler_start();
     } else {
         printf("{FG(255,0,0)}[FAIL]{FG(255,255,255)} Video Back Buffer initialization failed\n");
     }

@@ -3,6 +3,7 @@
 #include "../../lib/string.h"
 #include "../../lib/types.h"
 #include "../../include/memory/pmm.h"
+#include "../../include/scheduler/scheduler.h"
 
 static uint8_t* backbuffer = NULL;
 
@@ -89,6 +90,6 @@ void fb_copy_to_backbuffer() {
 void fb_swap_task(void) {
     while (1) {
         fb_swap_buffers();
-        for (volatile int i = 0; i < 1000000; i++);
+        task_sleep(16);
     }
 }
