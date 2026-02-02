@@ -8,12 +8,20 @@ drivers_src="$src_dir/drivers"
 includes_src="$src_dir/include"
 lib_src="$src_dir/lib"
 
-IMAGE_SIZE_MB=64
-KERNEL_SIZE_SECTORS=255
+IMAGE_SIZE_MB=12
+BOOTLOADER_SECTORS=32
+KERNEL_SECTORS=2017
+XCFS_METADATA_START=2050
+XCFS_METADATA_SECTORS=1001
+XCFS_DATA_START=3051
 
 echo "Building XC-OS..."
 echo "Image size: ${IMAGE_SIZE_MB}MB"
-echo "Kernel size: ${KERNEL_SIZE_SECTORS} sectors ($(($KERNEL_SIZE_SECTORS * 512 / 1024))KB)"
+echo "Bootloader: ${BOOTLOADER_SECTORS} sectors ($(($BOOTLOADER_SECTORS * 512 / 1024))KB) [sectors 0-31]"
+echo "Kernel: ${KERNEL_SECTORS} sectors ($(($KERNEL_SECTORS * 512 / 1024))KB) [sectors 32-2048]"
+echo "XCFS v2 metadata: ${XCFS_METADATA_SECTORS} sectors [sectors 2050-3050]"
+echo "XCFS data: starts at sector ${XCFS_DATA_START}"
+echo ""
 
 echo "Cleaning..."
 if [ -d "$build_dir" ]; then
@@ -97,14 +105,25 @@ ld -m elf_i386 -T "$src_dir/linker.ld" -o "$build_dir/kernel.bin" \
     "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o" "$build_dir/scheduler.o"
 [ $? -ne 0 ] && echo "Error linking Kernel" && exit 1
 
-KERNEL_SIZE=$(($KERNEL_SIZE_SECTORS * 512))
+KERNEL_SIZE=$(($KERNEL_SECTORS * 512))
 truncate -s $KERNEL_SIZE "$build_dir/kernel.bin"
 
-echo "Creating OS image..."
-cat "$build_dir/stage1.bin" "$build_dir/stage2.bin" "$build_dir/kernel.bin" > "$build_dir/xcos.img"
+STAGE2_SIZE=$((31 * 512))
+truncate -s $STAGE2_SIZE "$build_dir/stage2.bin"
+
+echo "Creating disk image with updated layout..."
 
 IMAGE_SIZE=$(($IMAGE_SIZE_MB * 1024 * 1024))
-truncate -s $IMAGE_SIZE "$build_dir/xcos.img"
+dd if=/dev/zero of="$build_dir/xcos.img" bs=512 count=$(($IMAGE_SIZE / 512)) 2>/dev/null
+
+dd if="$build_dir/stage1.bin" of="$build_dir/xcos.img" bs=512 count=1 conv=notrunc seek=0 2>/dev/null
+[ $? -ne 0 ] && echo "Error writing Stage 1" && exit 1
+
+dd if="$build_dir/stage2.bin" of="$build_dir/xcos.img" bs=512 count=31 conv=notrunc seek=1 2>/dev/null
+[ $? -ne 0 ] && echo "Error writing Stage 2" && exit 1
+
+dd if="$build_dir/kernel.bin" of="$build_dir/xcos.img" bs=512 count=$KERNEL_SECTORS conv=notrunc seek=32 2>/dev/null
+[ $? -ne 0 ] && echo "Error writing Kernel" && exit 1
 
 SIZE_STAGE1=$(stat -c%s "$build_dir/stage1.bin" 2>/dev/null || stat -f%z "$build_dir/stage1.bin" 2>/dev/null)
 SIZE_STAGE2=$(stat -c%s "$build_dir/stage2.bin" 2>/dev/null || stat -f%z "$build_dir/stage2.bin" 2>/dev/null)
@@ -113,10 +132,17 @@ SIZE_TOTAL=$(stat -c%s "$build_dir/xcos.img" 2>/dev/null || stat -f%z "$build_di
 
 echo ""
 echo "Build completed successfully!"
-echo "=========================="
-echo "Stage 1: $SIZE_STAGE1 bytes"
-echo "Stage 2: $SIZE_STAGE2 bytes"
-echo "Kernel:  $SIZE_KERNEL bytes ($(($SIZE_KERNEL / 1024))KB)"
-echo "Image:   $SIZE_TOTAL bytes (${IMAGE_SIZE_MB} MB)"
-echo "=========================="
+echo "============================================"
+echo "Disk Layout:"
+echo "  Bootloader:     Sectors 0-31    (16 KB)"
+echo "  Kernel:         Sectors 32-2048 (1033 KB)"
+echo "  XCFS v2:        Sectors 2050-3050 (513 KB)"
+echo "  XCFS Data:      Sector 3051+"
+echo ""
+echo "Component Sizes:"
+echo "  Stage 1:        $SIZE_STAGE1 bytes"
+echo "  Stage 2:        $SIZE_STAGE2 bytes"
+echo "  Kernel:         $SIZE_KERNEL bytes"
+echo "  Total Image:    $SIZE_TOTAL bytes (${IMAGE_SIZE_MB} MB)"
+echo "Output: $build_dir/xcos.img"
 

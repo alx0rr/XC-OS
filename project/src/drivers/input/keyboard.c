@@ -93,6 +93,20 @@ unsigned char keymap_up[128] =
 };
 static void keyboard_irq_handler(registers_t regs) {
     uint8_t scan_code = inb(KEYBOARD_DATA_PORT);
+    
+    if (scan_code == 0x3B) {
+        printf("\n{FG(255,0,0)}[F1] Emergency shutdown initiated...\n");
+        __asm__ volatile("cli");
+        __asm__ volatile("hlt");
+        while(1);
+    }
+    
+    if (scan_code == 0x3C) {
+        printf("\n{FG(255,255,0)}[F2] Rebooting system...\n");
+        outb(0x64, 0xFE);
+        while(1);
+    }
+    
     if (scan_code == 0x2A || scan_code == 0x36) {
         shift_pressed = 1;
         return;
