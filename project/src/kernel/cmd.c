@@ -461,6 +461,7 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}help{FG(255,255,255)}      - Show this help\n");
     printf("  {FG(255,255,0)}clear{FG(255,255,255)}     - Clear screen\n");
     printf("  {FG(255,255,0)}reboot{FG(255,255,255)}    - Reboot system\n");
+    printf("  {FG(255,255,0)}poweroff{FG(255,255,255)}  - Turn off your computer (works only on the emulator)\n");
     printf("  {FG(255,255,0)}uname{FG(255,255,255)}     - System information\n");
     printf("  {FG(255,255,0)}sysinfo{FG(255,255,255)}   - Detailed system info\n");
     printf("  {FG(255,255,0)}free{FG(255,255,255)}      - Memory usage\n");

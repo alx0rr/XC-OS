@@ -74,36 +74,47 @@ void drawchar_at_pos(
 	bitmapblt(x, y, 13, &FontData[(uint32_t)c * 13], fore_color, back_color);
 }
 void putchar(char c) {
-	uint16_t char_width = 8;
-	uint16_t char_height = 14;
-	if (c == '\n') {
-		xpos = 0;
-		ypos += char_height;
-		if (ypos + char_height >= fb_get_height() - Y_MARGIN) {
-            fb_fill(bg_color);
-            xpos = X_MARGIN;
-            ypos = Y_MARGIN;
+    const uint16_t char_width  = 8;
+    const uint16_t char_height = 14;
+
+    if (c == '\n') {
+        xpos = X_MARGIN;
+        ypos += char_height;
+
+        if (ypos + char_height >= fb_get_height() - Y_MARGIN) {
+            fb_scroll_up(char_height, bg_color);
+            ypos -= char_height;
         }
-	} else if (c == '\r') {
-		xpos = 0;
-	} else if (c == '\b') {
-		if (xpos >= char_width) {
-			xpos -= char_width;
-		}
-	} else {
-		drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
-		xpos += char_width;
-		if (xpos >= fb_get_width()) {
-			xpos = 0;
-			ypos += char_height;
-			if (ypos + char_height >= fb_get_height()) {
-				fb_fill(bg_color);
-				xpos = 0;
-				ypos = 0;
-			}
-		}
-	}
+        return;
+    }
+
+    if (c == '\r') {
+        xpos = X_MARGIN;
+        return;
+    }
+
+    if (c == '\b') {
+        if (xpos >= X_MARGIN + char_width) {
+            xpos -= char_width;
+        }
+        return;
+    }
+
+    drawchar_at_pos(c, xpos, ypos, fg_color, bg_color);
+    xpos += char_width;
+
+    if (xpos + char_width > fb_get_width() - X_MARGIN) {
+        xpos = X_MARGIN;
+        ypos += char_height;
+
+        if (ypos + char_height >= fb_get_height() - Y_MARGIN) {
+            fb_scroll_up(char_height, bg_color);
+            ypos -= char_height;
+        }
+    }
 }
+
+
 void print_at_pos(const char* str, uint16_t x, uint16_t y, uint32_t fore_color, uint32_t back_color) {
 	uint16_t char_width = 8;
 	while (*str != '\0') {

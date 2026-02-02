@@ -3,6 +3,8 @@
 #include <stdint.h>
 void fb_putpixel(uint16_t x, uint16_t y, uint32_t color);
 void fb_fill(uint32_t color);
+void fb_scroll_up(uint16_t pixels, uint32_t bg_color);
+
 uint16_t fb_get_width();
 uint16_t fb_get_height();
 #endif

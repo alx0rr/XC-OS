@@ -44,6 +44,16 @@ static void free_args(char* args[], int argc) {
     }
 }
 
+
+void poweroff() {
+    outw(0x604, 0x2000);
+    outw(0xB004, 0x2000);
+    asm volatile("cli; hlt");
+}
+
+
+
+
 void kernel_main(void) {
     startup();
 
@@ -92,6 +102,7 @@ void kernel_main(void) {
         else if (strcmp(cmd, "ps")       == 0)  scheduler_print_tasks();
         else if (strcmp(cmd, "taskdemo") == 0)  cmd_taskdemo();
         else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
+        else if (strcmp(cmd, "poweroff") == 0)  poweroff(); //work only in qemu. need ACPI for real machine
         else if (strcmp(cmd, "reboot")   == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");
             outb(0x64, 0xFE);
