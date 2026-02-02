@@ -1,5 +1,6 @@
 /* /ᐠ - ˕ -マ */
 #include "../include/graphics/vbe.h"
+#include "../include/graphics/framebuffer.h"
 #include "../include/text.h"
 #include "../include/memory/pmm.h"
 #include "../include/memory/vmm.h"
@@ -32,5 +33,13 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS File System initialized\n");
     scheduler_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Task Scheduler initialized\n");
+    if (fb_init_backbuffer() == 0) {
+        fb_copy_to_backbuffer();
+        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Video Back Buffer initialized\n");
+        task_create("System FB Swap", fb_swap_task, 0); //after fix delete swap from printf
+        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} FB Swap task created\n");
+    } else {
+        printf("{FG(255,0,0)}[FAIL]{FG(255,255,255)} Video Back Buffer initialization failed\n");
+    }
     printf("\n");
 }

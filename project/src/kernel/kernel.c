@@ -110,7 +110,6 @@ void kernel_main(void) {
         else if (strlen(cmd) > 0) {
             printf("{FG(255,0,0)}%s: command not found\n", cmd);
         }
-
         free_args(args, argc);
     }
 }

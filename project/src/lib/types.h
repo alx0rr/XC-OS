@@ -22,5 +22,6 @@ typedef unsigned int        uint;
 #define bool _Bool
 #define true 1
 #define false 0
+#define NULL ((void *)0)
 #define KB 1024
 #define MB (1024 * 1024)
