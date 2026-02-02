@@ -22,6 +22,12 @@ building the img file with build.sh:
 cd project && sh build.sh
 ```
 
+usage with qemu:
+
+```shell
+qemu-system-x86_64   -drive file=build/xcos.img
+```
+
 
 <h2 align="center">Preview</h2>
 
