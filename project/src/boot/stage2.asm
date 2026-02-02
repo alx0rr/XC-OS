@@ -88,7 +88,7 @@ load_kernel:
     mov si, load_kernel_part5_msg
     call prnt
     
-    mov cx, 2017
+    mov cx, 1509
     mov word [dap_remaining_sectors], cx
     mov dword [dap_current_lba], 540
     mov word [dap_current_segment], 0x1000
@@ -242,7 +242,7 @@ dap_current_segment: dw 0
 dap_current_offset: dw 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'Pycckoe nole ekcnerumentoB...', 13, 10, 0
+loading_kernel_msg: db 'P.S CAM (ARA)...', 13, 10, 0
 load_kernel_part1_msg: db 'Loading part 1/5...', 13, 10, 0
 load_kernel_part2_msg: db 'Loading part 2/5...', 13, 10, 0
 load_kernel_part3_msg: db 'Loading part 3/5...', 13, 10, 0
