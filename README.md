@@ -8,8 +8,6 @@
 [![Pull requests](https://img.shields.io/github/issues-pr/alx0rr/XC-OS.svg?style=flat-square)](https://github.com/alx0rr/XC-OS/pulls)
 
 
-
-
 XC-OS — Operating System maked by alx0rr and forker-25.
 This Operating System is simple and example project, which contains Custom FS(XCFS), simple VBE graphics, MMU, Kernel and Bootloader.
 The OS was created for hobby purposes, so it may contain errors, bugs and other shortcomings.
@@ -23,3 +21,14 @@ building the img file with build.sh:
 ```shell
 cd project && sh build.sh
 ```
+
+
+<h2 align="center">Preview</h2>
+
+<p align="center">
+  <img src="res/main.png" width="600"/>
+  <br><br>
+  <img src="res/dirs.png" width="600"/>
+  <br><br>
+  <img src="res/help.png" width="600"/>
+</p>
