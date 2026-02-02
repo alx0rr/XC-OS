@@ -21,80 +21,13 @@ load_kernel:
     int 0x13
     jc .no_lba_support
     
-    mov si, load_kernel_part1_msg
-    call prnt
-    
-    mov si, dap
-    mov byte [si], 0x10
-    mov byte [si+1], 0
-    mov word [si+2], 127
-    mov word [si+4], 0x0000
-    mov word [si+6], 0x1000
-    mov dword [si+8], 32
-    mov dword [si+12], 0
-    mov ah, 0x42
-    mov dl, [boot_drive]
-    int 0x13
-    jc kernel_load_error
-    
-    mov si, load_kernel_part2_msg
-    call prnt
-    
-    mov si, dap
-    mov byte [si], 0x10
-    mov byte [si+1], 0
-    mov word [si+2], 127
-    mov word [si+4], 0x0000
-    mov word [si+6], 0x4FC0
-    mov dword [si+8], 159
-    mov dword [si+12], 0
-    mov ah, 0x42
-    mov dl, [boot_drive]
-    int 0x13
-    jc kernel_load_error
-    
-    mov si, load_kernel_part3_msg
-    call prnt
-    
-    mov si, dap
-    mov byte [si], 0x10
-    mov byte [si+1], 0
-    mov word [si+2], 127
-    mov word [si+4], 0x0000
-    mov word [si+6], 0x9F80
-    mov dword [si+8], 286
-    mov dword [si+12], 0
-    mov ah, 0x42
-    mov dl, [boot_drive]
-    int 0x13
-    jc kernel_load_error
-    
-    mov si, load_kernel_part4_msg
-    call prnt
-    
-    mov si, dap
-    mov byte [si], 0x10
-    mov byte [si+1], 0
-    mov word [si+2], 127
-    mov word [si+4], 0x0000
-    mov word [si+6], 0xEF40
-    mov dword [si+8], 413
-    mov dword [si+12], 0
-    mov ah, 0x42
-    mov dl, [boot_drive]
-    int 0x13
-    jc kernel_load_error
-    
-    mov si, load_kernel_part5_msg
-    call prnt
-    
-    mov cx, 1509
+    mov cx, 2017
     mov word [dap_remaining_sectors], cx
-    mov dword [dap_current_lba], 540
+    mov dword [dap_current_lba], 32
     mov word [dap_current_segment], 0x1000
-    mov word [dap_current_offset], 0x3F00
+    mov word [dap_current_offset], 0x0000
     
-.load_remaining:
+.load_loop:
     mov cx, [dap_remaining_sectors]
     cmp cx, 0
     je .load_success
@@ -137,7 +70,7 @@ load_kernel:
     mov [dap_current_segment], ax
     
 .no_segment_wrap:
-    jmp .load_remaining
+    jmp .load_loop
     
 .no_lba_support:
     mov si, no_lba_msg
@@ -242,13 +175,8 @@ dap_current_segment: dw 0
 dap_current_offset: dw 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'P.S CAM (ARA)...', 13, 10, 0
-load_kernel_part1_msg: db 'Loading part 1/5...', 13, 10, 0
-load_kernel_part2_msg: db 'Loading part 2/5...', 13, 10, 0
-load_kernel_part3_msg: db 'Loading part 3/5...', 13, 10, 0
-load_kernel_part4_msg: db 'Loading part 4/5...', 13, 10, 0
-load_kernel_part5_msg: db 'Loading part 5/5...', 13, 10, 0
-kernel_loaded_msg: db 'Kernel loaded successfully!', 13, 10, 0
+loading_kernel_msg: db 'Fuck x86...', 13, 10, 0
+kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
 no_lba_msg: db 'LBA not supported!', 13, 10, 0
 vbe_init_msg: db 'Setting VBE mode...', 13, 10, 0
 mmap_init_msg: db 'Getting memory map...', 13, 10, 0
