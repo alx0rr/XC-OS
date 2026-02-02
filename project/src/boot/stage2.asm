@@ -21,6 +21,7 @@ load_kernel:
     int 0x13
     jc .no_lba_support
     
+    mov word [load_counter], 0
     mov cx, 2017
     mov word [dap_remaining_sectors], cx
     mov dword [dap_current_lba], 32
@@ -31,6 +32,9 @@ load_kernel:
     mov cx, [dap_remaining_sectors]
     cmp cx, 0
     je .load_success
+    
+    mov si, dot_msg
+    call prnt
     
     cmp cx, 127
     jbe .load_last_chunk
@@ -59,6 +63,8 @@ load_kernel:
     
     mov ax, [dap+2]
     sub [dap_remaining_sectors], ax
+    
+    movzx eax, ax
     add [dap_current_lba], eax
     
     shl ax, 9
@@ -68,8 +74,10 @@ load_kernel:
     mov ax, [dap_current_segment]
     add ax, 0x1000
     mov [dap_current_segment], ax
+    mov word [dap_current_offset], 0
     
 .no_segment_wrap:
+    inc word [load_counter]
     jmp .load_loop
     
 .no_lba_support:
@@ -78,6 +86,8 @@ load_kernel:
     jmp halt_system
     
 .load_success:
+    mov si, newline_msg
+    call prnt
     mov si, kernel_loaded_msg
     call prnt
     
@@ -118,8 +128,8 @@ protected_mode_start:
     
     mov esi, 0x10000
     mov edi, 0x100000
-    mov ecx, 262144
-    rep movsd
+    mov ecx, 258304
+    rep movsb
     
     jmp 0x08:0x100000
 
@@ -164,6 +174,7 @@ gdt_descriptor:
     dd gdt_start
 
 boot_drive: db 0x80
+load_counter: dw 0
 
 align 4
 dap:
@@ -175,7 +186,9 @@ dap_current_segment: dw 0
 dap_current_offset: dw 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'Fuck x86...', 13, 10, 0
+loading_kernel_msg: db 'Loading kernel (2017 sectors): ', 0
+dot_msg: db '.', 0
+newline_msg: db 13, 10, 0
 kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
 no_lba_msg: db 'LBA not supported!', 13, 10, 0
 vbe_init_msg: db 'Setting VBE mode...', 13, 10, 0
