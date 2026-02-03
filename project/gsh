@@ -56,7 +56,7 @@ case "$cmd" in
     echo "Committing..."
     if ${GIT_CMD[@]} commit -m "$msg"; then
       echo "Commit created. Pushing to origin/main..."
-      if ${GIT_CMD[@]} push origin main; then
+      if ${GIT_CMD[@]} push origin dev; then
         echo "Push successful."
       else
         echo "Push failed." >&2

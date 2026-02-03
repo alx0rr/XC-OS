@@ -61,6 +61,7 @@ void scheduler_start() {
         return;
     }
     
+    printf("{FG(0,255,255)}Registering scheduler timer handler for IRQ0...\n");
     idt_register_irq_handler(0, scheduler_timer_handler);
     
     current_task = task_list_head;
@@ -118,7 +119,7 @@ task_t* task_create(const char* name, void (*entry_point)(), uint32_t flags) {
     task->next = task_list_head;
     task_list_head = task;
     
-    printf("{FG(0,255,0)}Task created: %s (ID: %u)\n", task->name, task->id);
+    printf("{FG(0,255,0)}Task created: %s (ID: %u) at ESP=0x%x\n", task->name, task->id, task->esp);
     
     return task;
 }
@@ -190,12 +191,13 @@ void scheduler_switch_task(registers_t* regs) {
 
 void scheduler_print_tasks() {
     printf("{FG(255,255,0)}Task List:\n");
-    printf("{FG(0,255,255)}%-4s %-20s %-12s %-10s\n", 
-           "ID", "Name", "State", "Time");
+    printf("{FG(0,255,255)}ID   Name                 State        Time\n");
     printf("================================================\n");
     
     task_t* task = task_list_head;
+    uint32_t task_count = 0;
     while (task) {
+        task_count++;
         const char* state_str;
         uint32_t color;
         
@@ -221,7 +223,7 @@ void scheduler_print_tasks() {
                 color = 0x888888;
         }
         
-        printf("{FG(%u,%u,%u)}%-4u {FG(255,255,255)}%-20s {FG(%u,%u,%u)}%-12s {FG(255,255,255)}%u/%u ms\n",
+        printf("{FG(%u,%u,%u)}%u    {FG(255,255,255)}%s    {FG(%u,%u,%u)}%s    {FG(255,255,255)}%u/%u ms\n",
                (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF,
                task->id, 
                task->name,
@@ -232,7 +234,8 @@ void scheduler_print_tasks() {
         task = task->next;
     }
     
-    printf("\n{FG(0,255,255)}Current task: {FG(255,255,0)}%s{FG(255,255,255)} (ID: %u)\n",
+    printf("\n{FG(0,255,255)}Total tasks: {FG(255,255,0)}%u\n", task_count);
+    printf("{FG(0,255,255)}Current task: {FG(255,255,0)}%s {FG(255,255,255)}(ID: %u)\n",
            current_task ? current_task->name : "none",
            current_task ? current_task->id : 0);
     printf("{FG(0,255,255)}Scheduler: {FG(255,255,0)}%s\n\n",

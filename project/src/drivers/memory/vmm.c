@@ -25,7 +25,9 @@ static page_table_t* vmm_get_page_table(page_directory_t* dir, uint32_t virt, ui
         void* table_phys = pmm_malloc(PAGE_SIZE);
         if (!table_phys) return 0;
         dir->entries[pd_index] = ((uint32_t)table_phys & 0xFFFFF000) | PAGE_PRESENT | PAGE_WRITE;
-        return (page_table_t*)table_phys;
+        page_table_t* table = (page_table_t*)table_phys;
+        memset(table, 0, PAGE_SIZE);
+        return table;
     }
     uint32_t table_phys = dir->entries[pd_index] & 0xFFFFF000;
     return (page_table_t*)table_phys;
