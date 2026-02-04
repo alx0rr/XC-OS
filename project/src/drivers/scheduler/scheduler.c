@@ -12,6 +12,12 @@ static uint32_t timer_ticks = 0;
 
 extern void task_switch_asm(uint32_t* old_esp, uint32_t new_esp);
 
+
+uint32_t get_scheduler_status(){
+    return scheduler_enabled;
+}
+
+
 static task_t* find_next_task() {
     if (!current_task) return task_list_head;
     

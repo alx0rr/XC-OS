@@ -49,4 +49,6 @@ void scheduler_switch_task(registers_t* regs);
 
 void scheduler_print_tasks();
 
+uint32_t get_scheduler_status();
+
 #endif

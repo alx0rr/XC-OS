@@ -170,11 +170,50 @@ void cmd_stat(int argc, char** argv) {
     printf("{FG(0,255,0)}Status: Not implemented yet\n");
 }
 
+
+
+static void tree_walk(const char* path, int depth) {
+    xcfs_dirent_t entries[32];
+    int count = xcfs_readdir(path, entries, 32);
+    if (count <= 0) return;
+
+    for (int i = 0; i < count; i++) {
+        for (int d = 0; d < depth - 1; d++) {
+            printf("|   ");
+        }
+
+        printf("|-- ");
+
+        if (entries[i].type == XCFS_TYPE_DIR) {
+            printf("{FG(100,200,255)}%s/\n", entries[i].name);
+
+            char next_path[XCFS_MAX_PATH];
+            if (strcmp(path, "/") == 0) {
+                snprintf(next_path, sizeof(next_path), "/%s", entries[i].name);
+            } else {
+                snprintf(next_path, sizeof(next_path), "%s/%s", path, entries[i].name);
+            }
+
+            tree_walk(next_path, depth + 1);
+        } else {
+            printf("{FG(255,255,255)}%s\n", entries[i].name);
+        }
+    }
+}
+
+
+
+
+
 void cmd_tree(int argc, char** argv) {
+    const char* path = (argc > 0) ? argv[0] : xcfs_getcwd();
+
     printf("{FG(255,255,0)}Directory Tree\n");
     printf("{FG(0,255,255)}==============\n");
-    printf("/ (root)\n");
-    printf("  Not implemented yet\n\n");
+    printf("{FG(255,255,255)}%s\n", path);
+
+    tree_walk(path, 1);
+    printf("\n");
 }
 
 void cmd_uname(void) {
@@ -552,6 +591,12 @@ void print_fps(void) {
     printf("{FG(0,255,0)}FPS:{FG(255,255,255)}%x\n", get_fps());
 }
 
+void poweroff() {
+    outw(0x604, 0x2000);
+    outw(0xB004, 0x2000);
+    asm volatile("cli; hlt");
+}
+
 void cmd_help(void) {
     printf("{FG(0,255,255)}=== System Commands ===\n");
     printf("  {FG(255,255,0)}help{FG(255,255,255)}      - Show this help\n");
@@ -606,4 +651,112 @@ void cmd_help(void) {
     printf("{FG(0,255,255)}=== Other Commands ===\n");
     printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
     printf("\n");
+}
+
+
+
+
+
+
+
+
+
+
+//==============================
+
+
+
+
+static void parse_command(char* input, char* cmd, char* args[], int* argc) {
+    int i = 0, j = 0;
+    *argc = 0;
+
+    while (input[i] && input[i] == ' ') i++;
+
+    while (input[i] && input[i] != ' ' && j < 63)
+        cmd[j++] = input[i++];
+    cmd[j] = '\0';
+
+    while (input[i] && *argc < 16) {
+        while (input[i] == ' ') i++;
+        if (!input[i]) break;
+
+        args[*argc] = (char*)pmm_malloc(128);
+        if (!args[*argc]) break;
+
+        j = 0;
+        while (input[i] && input[i] != ' ' && j < 127)
+            args[*argc][j++] = input[i++];
+        args[*argc][j] = '\0';
+        (*argc)++;
+    }
+}
+
+static void free_args(char* args[], int argc) {
+    for (int i = 0; i < argc; i++) {
+        if (args[i]) pmm_free(args[i]);
+    }
+}
+
+
+void cmd(){
+    while (1) {
+        printf("{FG(194,122,255)}root@xcos{FG(255,255,255)}:{FG(100,200,255)}%s{FG(255,255,255)}$ ",
+               xcfs_getcwd());
+
+        char* input = keyboard_input();
+        printf("\n");
+
+        if (strlen(input) == 0) continue;
+
+        char  cmd[64]    = {0};
+        char* args[16]   = {0};
+        int   argc       = 0;
+        parse_command(input, cmd, args, &argc);
+
+        if      (strcmp(cmd, "help")     == 0)  cmd_help();
+        else if (strcmp(cmd, "clear")    == 0)  clear();
+        else if (strcmp(cmd, "ls")       == 0)  cmd_ls(argc, args);
+        else if (strcmp(cmd, "cd")       == 0)  cmd_cd(argc, args);
+        else if (strcmp(cmd, "pwd")      == 0)  cmd_pwd();
+        else if (strcmp(cmd, "mkdir")    == 0)  cmd_mkdir(argc, args);
+        else if (strcmp(cmd, "cat")      == 0)  cmd_cat(argc, args);
+        else if (strcmp(cmd, "echo")     == 0)  cmd_echo(argc, args);
+        else if (strcmp(cmd, "touch")    == 0)  cmd_touch(argc, args);
+        else if (strcmp(cmd, "rm")       == 0)  cmd_rm(argc, args);
+        else if (strcmp(cmd, "cp")       == 0)  cmd_cp(argc, args);
+        else if (strcmp(cmd, "mv")       == 0)  cmd_mv(argc, args);
+        else if (strcmp(cmd, "stat")     == 0)  cmd_stat(argc, args);
+        else if (strcmp(cmd, "tree")     == 0)  cmd_tree(argc, args);
+        else if (strcmp(cmd, "uname")    == 0)  cmd_uname();
+        else if (strcmp(cmd, "free")     == 0)  cmd_free();
+        else if (strcmp(cmd, "uptime")   == 0)  cmd_uptime();
+        else if (strcmp(cmd, "clock")    == 0)  cmd_clock();
+        else if (strcmp(cmd, "timer")    == 0)  cmd_timer();
+        else if (strcmp(cmd, "sleep")    == 0)  cmd_sleep(argc, args);
+        else if (strcmp(cmd, "countdown") == 0) cmd_countdown(argc, args);
+        else if (strcmp(cmd, "meminfo")  == 0)  cmd_meminfo();
+        else if (strcmp(cmd, "sysinfo")  == 0)  cmd_sysinfo();
+        else if (strcmp(cmd, "vmmstat")  == 0)  vmm_print_stats();
+        else if (strcmp(cmd, "cpu")      == 0)  cpu_print_info();
+        else if (strcmp(cmd, "memtest")  == 0)  cmd_memtest();
+        else if (strcmp(cmd, "vmmtest")  == 0)  cmd_vmmtest();
+        else if (strcmp(cmd, "bench")    == 0)  cmd_bench();
+        else if (strcmp(cmd, "pitbench") == 0)  cmd_pitbench();
+        else if (strcmp(cmd, "ps")       == 0)  scheduler_print_tasks();
+        else if (strcmp(cmd, "taskdemo") == 0)  cmd_taskdemo();
+        else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
+        else if (strcmp(cmd, "poweroff") == 0)  poweroff(); // bruh
+        else if (strcmp(cmd, "fps") == 0)  print_fps();
+        else if (strcmp(cmd, "reboot")   == 0) {
+            printf("{FG(255,255,0)}Rebooting...\n");
+            outb(0x64, 0xFE);
+        }
+        else if (strlen(cmd) > 0) {
+            printf("{FG(255,0,0)}%s: command not found\n", cmd);
+        }
+
+        free_args(args, argc);
+        task_yield();
+    }
 }
