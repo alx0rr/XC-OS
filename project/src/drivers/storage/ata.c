@@ -7,7 +7,7 @@ static ata_device_t ata_devices[4];
 static volatile uint8_t ata_irq_invoked = 0;
 static volatile uint8_t ata_irq_error = 0;
 
-static void ata_irq_handler_primary(registers_t regs) {
+static void ata_irq_handler_primary(registers_t* regs) {
     (void)regs;
     uint8_t status = inb(ATA_PRIMARY_IO + ATA_REG_STATUS);
     if(status & ATA_SR_ERR) {
@@ -16,7 +16,7 @@ static void ata_irq_handler_primary(registers_t regs) {
     ata_irq_invoked = 1;
 }
 
-static void ata_irq_handler_secondary(registers_t regs) {
+static void ata_irq_handler_secondary(registers_t* regs) {
     (void)regs;
     uint8_t status = inb(ATA_SECONDARY_IO + ATA_REG_STATUS);
     if(status & ATA_SR_ERR) {

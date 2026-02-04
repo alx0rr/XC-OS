@@ -51,7 +51,7 @@ extern void irq12();
 extern void irq13();
 extern void irq14();
 extern void irq15();
-typedef void (*irq_handler_t)(registers_t);
+typedef void (*irq_handler_t)(registers_t*); 
 static irq_handler_t irq_handlers[16] = {0};
 static void idt_set_gate(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flags) {
     idt[n].offset_low = handler & 0xFFFF;
@@ -60,6 +60,7 @@ static void idt_set_gate(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flag
     idt[n].zero = 0;
     idt[n].flags = flags;
 }
+
 void idt_register_irq_handler(uint8_t irq_no, irq_handler_t handler) {
     if (irq_no < 16) {
         irq_handlers[irq_no] = handler;
@@ -141,7 +142,7 @@ void isr_handler(registers_t *regs) {
     } else if (regs->int_no >= 32 && regs->int_no < 48) {
         uint8_t irq_no = regs->int_no - 32;
         if (irq_handlers[irq_no]) {
-            irq_handlers[irq_no](*regs);
+            irq_handlers[irq_no](regs);
         }
         if (regs->int_no >= 40) {
             outb(0xA0, 0x20);

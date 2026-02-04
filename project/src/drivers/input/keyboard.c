@@ -91,7 +91,7 @@ unsigned char keymap_up[128] =
     0,
     0,
 };
-static void keyboard_irq_handler(registers_t regs) {
+static void keyboard_irq_handler(registers_t* regs) {
     uint8_t scan_code = inb(KEYBOARD_DATA_PORT);
     
     if (scan_code == 0x3B) {

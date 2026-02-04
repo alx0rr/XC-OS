@@ -5,10 +5,12 @@
 static volatile u64 pit_ticks = 0;
 static u32 pit_frequency = 0;
 
-static void pit_irq_handler(registers_t regs) {
+static void pit_irq_handler(registers_t* regs) {
     (void)regs;
     pit_ticks++;
+    outb(0x20, 0x20);
 }
+
 
 void pit_init(u32 frequency) {
     pit_frequency = frequency;
@@ -35,8 +37,11 @@ u64 pit_get_ticks() {
 
 void pit_sleep(u32 milliseconds) {
     u32 ticks_to_wait = (pit_frequency * milliseconds) / 1000;
-    u32 start_ticks = (u32)pit_ticks;
-    
-    while (((u32)pit_ticks - start_ticks) < ticks_to_wait) {
+    u64 start_ticks = pit_ticks;
+
+    asm volatile("sti");
+
+    while ((pit_ticks - start_ticks) < ticks_to_wait) {
+        asm volatile("hlt");
     }
 }

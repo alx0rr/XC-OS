@@ -37,7 +37,7 @@ static task_t* find_next_task() {
     return current_task;
 }
 
-void scheduler_timer_handler(registers_t regs) {
+void scheduler_timer_handler(registers_t* regs) {
     timer_ticks++;
     
     if (!scheduler_enabled || !current_task) {
@@ -47,7 +47,7 @@ void scheduler_timer_handler(registers_t regs) {
     current_task->time_used++;
     
     if (current_task->time_used >= current_task->time_slice) {
-        scheduler_switch_task(&regs);
+        scheduler_switch_task(regs);
     }
 }
 
