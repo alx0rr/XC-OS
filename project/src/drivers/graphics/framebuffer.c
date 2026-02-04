@@ -1,10 +1,27 @@
 #include "../include/graphics/vbe.h"
 #include "../include/graphics/framebuffer.h"
+#include "../../lib/time.h"
 #include "../../lib/string.h"
+#include "../../lib/types.h"
+#include "../../include/memory/pmm.h"
+#include "../../include/scheduler/scheduler.h"
+
+static uint8_t* backbuffer = NULL;
+volatile uint32_t fb_fps = 0;
+
+static uint8_t* fb_get_buffer() {
+    return backbuffer ? backbuffer : vbe_get_framebuffer();
+}
+
+uint32_t get_fps() {
+    return fb_fps;
+}
+
+
 void fb_putpixel(uint16_t x, uint16_t y, uint32_t color) {
     vbe_info_t vbe = get_vbe_struct();
     if (x >= vbe.width || y >= vbe.height) return;
-    uint8_t* fb = vbe_get_framebuffer();
+    uint8_t* fb = fb_get_buffer();
     if (vbe.bpp == 24) {
         uint8_t* pixel = fb + y * vbe.pitch + x * 3;
         pixel[0] = color & 0xFF;
@@ -26,7 +43,7 @@ uint16_t fb_get_width() { return vbe_get_width(); }
 
 void fb_scroll_up(uint16_t pixels, uint32_t bg_color) {
     vbe_info_t vbe = get_vbe_struct();
-    uint8_t* fb = vbe_get_framebuffer();
+    uint8_t* fb = fb_get_buffer();
 
     uint32_t bytes_per_pixel = vbe.bpp / 8;
     uint32_t row_size = vbe.pitch;
@@ -52,5 +69,52 @@ void fb_scroll_up(uint16_t pixels, uint32_t bg_color) {
                 *p = bg_color;
             }
         }
+    }
+}
+
+
+uint8_t* fb_init_backbuffer() {
+    vbe_info_t vbe = get_vbe_struct();
+    backbuffer = (uint8_t*)pmm_malloc(vbe.height * vbe.pitch);
+    return backbuffer;
+}
+
+int8_t fb_swap_buffers(void) {
+    
+    static uint32_t last_time = 0;
+    static uint32_t frames = 0;
+
+    if (!backbuffer)
+        return -1;
+
+    vbe_info_t vbe = get_vbe_struct();
+    memcpy(vbe_get_framebuffer(), backbuffer, vbe.height * vbe.pitch);
+
+    frames++;
+
+    uint32_t now = get_uptime();
+    if (now - last_time >= 1000) {
+        fb_fps = frames;
+        frames = 0;
+        last_time = now;
+    }
+
+    return 0;
+}
+
+
+
+void fb_copy_to_backbuffer() {
+    if (!backbuffer) return;
+    vbe_info_t vbe = get_vbe_struct();
+    uint8_t* fb = vbe_get_framebuffer();
+    memcpy(backbuffer, fb, vbe.height * vbe.pitch);
+}
+
+
+void fb_swap_task(void) {
+    while (1) {
+        fb_swap_buffers();
+        task_yield();
     }
 }

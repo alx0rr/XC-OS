@@ -107,6 +107,7 @@ void kernel_main(void) {
         else if (strcmp(cmd, "taskdemo") == 0)  cmd_taskdemo();
         else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
         else if (strcmp(cmd, "poweroff") == 0)  poweroff(); // bruh
+        else if (strcmp(cmd, "fps") == 0)  print_fps();
         else if (strcmp(cmd, "reboot")   == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");
             outb(0x64, 0xFE);

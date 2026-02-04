@@ -20,6 +20,7 @@ typedef unsigned int        uint;
 #define PACKED __attribute__((__packed__))
 #define typeof __typeof__
 #define bool _Bool
+#define NULL ((void *)0)
 #define true 1
 #define false 0
 #define KB 1024

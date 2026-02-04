@@ -9,6 +9,7 @@
 #include "../include/memory/vmm.h"
 #include "../include/cpu/cpu.h"
 #include "../include/graphics/vbe.h"
+#include "../include/graphics/framebuffer.h"
 #include "../include/scheduler/scheduler.h"
 #include "../include/timer/pit.h"
 #include "../lib/string.h"
@@ -545,6 +546,12 @@ void cmd_pitbench(void) {
            ((elapsed * 10000) / 5000) % 100);
 }
 
+
+
+void print_fps(void) {
+    printf("{FG(0,255,0)}FPS:{FG(255,255,255)}%x\n", get_fps());
+}
+
 void cmd_help(void) {
     printf("{FG(0,255,255)}=== System Commands ===\n");
     printf("  {FG(255,255,0)}help{FG(255,255,255)}      - Show this help\n");
@@ -562,6 +569,7 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}timer{FG(255,255,255)}     - Show timer ticks\n");
     printf("  {FG(255,255,0)}sleep{FG(255,255,255)} <ms>- Sleep for milliseconds\n");
     printf("  {FG(255,255,0)}countdown{FG(255,255,255)} <s> - Countdown timer\n");
+    printf("  {FG(255,255,0)}fps{FG(255,255,255)} <s> - Show current fps\n");
     printf("\n");
 
     printf("{FG(0,255,255)}=== Directory Commands ===\n");

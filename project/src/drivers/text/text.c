@@ -224,6 +224,7 @@ void printf(const char *format, ...) {
 			}
 		}
 	}
+    fb_swap_buffers();
 }
 void clear() {
     fb_fill(bg_color);
