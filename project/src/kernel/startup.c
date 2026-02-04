@@ -1,6 +1,5 @@
 /* /ᐠ - ˕ -マ */
 #include "../include/graphics/vbe.h"
-#include "../include/graphics/framebuffer.h"
 #include "../include/text.h"
 #include "../include/memory/pmm.h"
 #include "../include/memory/vmm.h"
@@ -10,6 +9,7 @@
 #include "../include/fs/xcfs.h"
 #include "../include/input/keyboard.h"
 #include "../include/scheduler/scheduler.h"
+#include "../include/timer/pit.h"
 void startup() {
     vbe_init();
     text_init();
@@ -25,6 +25,8 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIC initialized\n");
     idt_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} IDT initialized\n");
+    pit_init(1000);
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIT initialized (1000 Hz)\n");
     keyboard_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Keyboard initialized\n");
     ata_init();
@@ -33,14 +35,5 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS File System initialized\n");
     scheduler_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Task Scheduler initialized\n");
-    if (fb_init_backbuffer() == 0) {
-        fb_copy_to_backbuffer();
-        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Video Back Buffer initialized\n");
-        task_create("System FB Swap", fb_swap_task, 0); //after fix delete swap from printf
-        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} FB Swap task created\n");
-        scheduler_start();
-    } else {
-        printf("{FG(255,0,0)}[FAIL]{FG(255,255,255)} Video Back Buffer initialization failed\n");
-    }
     printf("\n");
 }

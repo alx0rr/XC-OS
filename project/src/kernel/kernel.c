@@ -92,6 +92,9 @@ void kernel_main(void) {
         else if (strcmp(cmd, "free")     == 0)  cmd_free();
         else if (strcmp(cmd, "uptime")   == 0)  cmd_uptime();
         else if (strcmp(cmd, "clock")    == 0)  cmd_clock();
+        else if (strcmp(cmd, "timer")    == 0)  cmd_timer();
+        else if (strcmp(cmd, "sleep")    == 0)  cmd_sleep(argc, args);
+        else if (strcmp(cmd, "countdown") == 0) cmd_countdown(argc, args);
         else if (strcmp(cmd, "meminfo")  == 0)  cmd_meminfo();
         else if (strcmp(cmd, "sysinfo")  == 0)  cmd_sysinfo();
         else if (strcmp(cmd, "vmmstat")  == 0)  vmm_print_stats();
@@ -99,10 +102,11 @@ void kernel_main(void) {
         else if (strcmp(cmd, "memtest")  == 0)  cmd_memtest();
         else if (strcmp(cmd, "vmmtest")  == 0)  cmd_vmmtest();
         else if (strcmp(cmd, "bench")    == 0)  cmd_bench();
+        else if (strcmp(cmd, "pitbench") == 0)  cmd_pitbench();
         else if (strcmp(cmd, "ps")       == 0)  scheduler_print_tasks();
         else if (strcmp(cmd, "taskdemo") == 0)  cmd_taskdemo();
         else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
-        else if (strcmp(cmd, "poweroff") == 0)  poweroff(); //work only in qemu. need ACPI for real machine
+        else if (strcmp(cmd, "poweroff") == 0)  poweroff(); // bruh
         else if (strcmp(cmd, "reboot")   == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");
             outb(0x64, 0xFE);
@@ -110,6 +114,7 @@ void kernel_main(void) {
         else if (strlen(cmd) > 0) {
             printf("{FG(255,0,0)}%s: command not found\n", cmd);
         }
+
         free_args(args, argc);
     }
 }

@@ -10,6 +10,7 @@
 #include "../include/cpu/cpu.h"
 #include "../include/graphics/vbe.h"
 #include "../include/scheduler/scheduler.h"
+#include "../include/timer/pit.h"
 #include "../lib/string.h"
 #include "../lib/time.h"
 #include "../lib/io.h"
@@ -456,6 +457,94 @@ void cmd_banner(int argc, char** argv) {
     printf("{FG(255,255,255)}\n\n");
 }
 
+void cmd_timer(void) {
+    printf("{FG(0,255,255)}System Timer Information\n");
+    printf("========================\n\n");
+    u64 ticks = pit_get_ticks();
+    u32 ticks_low = (u32)ticks;
+    printf("Ticks since boot: {FG(255,255,0)}%u\n", ticks_low);
+    printf("{FG(255,255,255)}Seconds since boot: {FG(255,255,0)}%u\n", ticks_low / 1000);
+}
+
+void cmd_sleep(int argc, char** argv) {
+    if (argc < 1) {
+        printf("{FG(255,0,0)}Usage: sleep <milliseconds>\n");
+        return;
+    }
+    
+    u32 ms = 0;
+    for (int i = 0; argv[0][i]; i++) {
+        if (argv[0][i] >= '0' && argv[0][i] <= '9') {
+            ms = ms * 10 + (argv[0][i] - '0');
+        } else {
+            printf("{FG(255,0,0)}Invalid number\n");
+            return;
+        }
+    }
+    
+    printf("Sleeping for %u ms...\n", ms);
+    pit_sleep(ms);
+    printf("{FG(0,255,0)}Done!\n");
+}
+
+void cmd_countdown(int argc, char** argv) {
+    if (argc < 1) {
+        printf("{FG(255,0,0)}Usage: countdown <seconds>\n");
+        return;
+    }
+    
+    u32 seconds = 0;
+    for (int i = 0; argv[0][i]; i++) {
+        if (argv[0][i] >= '0' && argv[0][i] <= '9') {
+            seconds = seconds * 10 + (argv[0][i] - '0');
+        } else {
+            printf("{FG(255,0,0)}Invalid number\n");
+            return;
+        }
+    }
+    
+    if (seconds > 60) {
+        printf("{FG(255,0,0)}Maximum 60 seconds\n");
+        return;
+    }
+    
+    printf("{FG(255,255,0)}Countdown started...\n");
+    for (u32 i = seconds; i > 0; i--) {
+        printf("{FG(0,255,255)}%u... ", i);
+        pit_sleep(1000);
+    }
+    printf("{FG(0,255,0)}\nDone!\n");
+}
+
+void cmd_pitbench(void) {
+    printf("{FG(255,255,0)}PIT Accuracy Test\n");
+    printf("{FG(0,255,255)}=================\n\n");
+    
+    printf("Testing 1 second delay...\n");
+    u64 start = pit_get_ticks();
+    pit_sleep(1000);
+    u64 end = pit_get_ticks();
+    u32 elapsed = (u32)(end - start);
+    
+    printf("Expected ticks: 1000\n");
+    printf("Actual ticks:   {FG(255,255,0)}%u\n", elapsed);
+    printf("{FG(255,255,255)}Accuracy:       {FG(0,255,0)}%u.%02u%%\n\n", 
+           (elapsed * 100) / 1000,
+           ((elapsed * 10000) / 1000) % 100);
+    
+    printf("Testing 5 second delay...\n");
+    start = pit_get_ticks();
+    pit_sleep(5000);
+    end = pit_get_ticks();
+    elapsed = (u32)(end - start);
+    
+    printf("Expected ticks: 5000\n");
+    printf("Actual ticks:   {FG(255,255,0)}%u\n", elapsed);
+    printf("{FG(255,255,255)}Accuracy:       {FG(0,255,0)}%u.%02u%%\n\n",
+           (elapsed * 100) / 5000,
+           ((elapsed * 10000) / 5000) % 100);
+}
+
 void cmd_help(void) {
     printf("{FG(0,255,255)}=== System Commands ===\n");
     printf("  {FG(255,255,0)}help{FG(255,255,255)}      - Show this help\n");
@@ -470,6 +559,9 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}cpu{FG(255,255,255)}       - CPU information\n");
     printf("  {FG(255,255,0)}uptime{FG(255,255,255)}    - System uptime\n");
     printf("  {FG(255,255,0)}clock{FG(255,255,255)}     - Show date and time\n");
+    printf("  {FG(255,255,0)}timer{FG(255,255,255)}     - Show timer ticks\n");
+    printf("  {FG(255,255,0)}sleep{FG(255,255,255)} <ms>- Sleep for milliseconds\n");
+    printf("  {FG(255,255,0)}countdown{FG(255,255,255)} <s> - Countdown timer\n");
     printf("\n");
 
     printf("{FG(0,255,255)}=== Directory Commands ===\n");
@@ -495,6 +587,7 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
     printf("  {FG(255,255,0)}vmmtest{FG(255,255,255)}   - VMM test suite\n");
     printf("  {FG(255,255,0)}bench{FG(255,255,255)}     - System benchmark\n");
+    printf("  {FG(255,255,0)}pitbench{FG(255,255,255)}  - PIT accuracy test\n");
     printf("\n");
 
     printf("{FG(0,255,255)}=== Multitasking Commands ===\n");
