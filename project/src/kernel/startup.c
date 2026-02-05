@@ -55,6 +55,5 @@ void startup() {
     */
 
     printf("\n");
-    pcspk_play_note(1000, 150);
-    pcspk_play_note(1500, 150);
+    pcspk_play_note(1000, 50);
 }
