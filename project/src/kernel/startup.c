@@ -18,6 +18,7 @@ void startup() {
     vbe_init();
     text_init();
     clear();
+    printf("Brandenburg the maid\n");
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} VBE initialized\n");
     init_pmm();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Memory Manager initialized\n");
