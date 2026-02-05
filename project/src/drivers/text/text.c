@@ -13,7 +13,7 @@ uint16_t xpos = X_MARGIN;
 uint16_t ypos = Y_MARGIN;
 uint32_t bg_color = 0;
 uint32_t fg_color = 0xFFFFFF;
-uint8_t current_font_scale = 1;
+uint8_t current_font_scale = 2;
 void text_init() {
     uint16_t width = fb_get_width();
     uint16_t height = fb_get_height();
