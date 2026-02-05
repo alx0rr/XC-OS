@@ -1,5 +1,5 @@
 /* 1 February 2026 */
-/* /ᐠ - ˕ -マ forker-25 presents */
+/* /ᐠ - ˕ -マ forker-25 'n' alx0rr presents */
 /* XC-OS CMD's */
 
 #include "../include/text.h"
@@ -653,19 +653,7 @@ void cmd_help(void) {
     printf("\n");
 }
 
-
-
-
-
-
-
-
-
-
-//==============================
-
-
-
+//BEGIN OF CMD CYCLE
 
 static void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;

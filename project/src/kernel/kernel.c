@@ -6,7 +6,7 @@
 void kernel_main(void) {
     startup();
 
-    printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS v0.3{FG(0,255,0)}\n");
+    printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS :3{FG(0,255,0)}\n");
     printf("\nType '{FG(255,255,0)}help{FG(255,255,255)}' for available commands\n\n");
 
     cmd();
