@@ -19,7 +19,6 @@ void startup() {
     vbe_init();
     text_init();
     clear();
-    printf("Brandenburg the maid\n");
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} VBE initialized\n");
     init_pmm();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Memory Manager initialized\n");
@@ -32,9 +31,8 @@ void startup() {
     idt_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} IDT initialized\n");
     pit_init(1000);
-    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIT initialized (1000 Hz)\n");
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIT initialized\n");
     pcspk_init();
-    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PC Speaker initialized\n");
     keyboard_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Keyboard initialized\n");
     ata_init();
