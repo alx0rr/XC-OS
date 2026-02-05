@@ -1,3 +1,4 @@
+#include "../../include/scheduler/scheduler.h"
 #include "../../include/graphics/framebuffer.h"
 #include "../../include/font.h"
 #include "../../lib/string.h"
@@ -223,6 +224,9 @@ void printf(const char *format, ...) {
 					break;
 			}
 		}
+	}
+	if (get_scheduler_status() == 0) {
+		fb_swap_buffers();
 	}
 }
 void clear() {
