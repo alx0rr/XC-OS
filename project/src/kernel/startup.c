@@ -55,26 +55,6 @@ void startup() {
     */
 
     printf("\n");
-    
-    pcspk_play_note(262, 150);
-    pit_sleep(50);
-    pcspk_play_note(392, 150);
-    pit_sleep(50);
-    pcspk_play_note(523, 150);
-    pit_sleep(50);
-    pcspk_play_note(392, 150);
-    pit_sleep(50);
-    pcspk_play_note(523, 400);
-    
-    pit_sleep(300);
-    
-    pcspk_play_note(330, 150);
-    pit_sleep(50);
-    pcspk_play_note(294, 150);
-    pit_sleep(50);
-    pcspk_play_note(262, 150);
-    pit_sleep(50);
-    pcspk_play_note(247, 150);
-    pit_sleep(50);
-    pcspk_play_note(220, 400);
+    pcspk_play_note(1000, 150);
+    pcspk_play_note(1500, 150);
 }
