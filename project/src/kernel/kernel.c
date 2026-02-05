@@ -3,8 +3,6 @@
 #include "startup.c"
 #include "cmd.c"
 
-
-
 void kernel_main(void) {
     startup();
 
@@ -13,10 +11,11 @@ void kernel_main(void) {
 
     if (get_scheduler_status()){
         task_create("System CMD", cmd, 0);
-        scheduler_start();
+        
+        while(1) {
+            asm volatile("hlt");
+        }
     } else {
         cmd();
     }
-    
-    cmd();
 }
