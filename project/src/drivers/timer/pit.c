@@ -1,13 +1,16 @@
 #include "../../include/timer/pit.h"
 #include "../../include/interrupts/idt.h"
+#include "../../include/scheduler/scheduler.h"
 #include "../../lib/io.h"
 
 static volatile u64 pit_ticks = 0;
 static u32 pit_frequency = 0;
 
 static void pit_irq_handler(registers_t* regs) {
-    (void)regs;
     pit_ticks++;
+    
+    scheduler_tick(regs);
+    
     outb(0x20, 0x20);
 }
 

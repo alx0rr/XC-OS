@@ -2,15 +2,13 @@
 #include "../../include/memory/pmm.h"
 #include "../../include/memory/vmm.h"
 #include "../../include/text.h"
+#include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 
 static task_t* task_list_head = 0;
 static task_t* current_task = 0;
 static uint32_t next_task_id = 0;
 static volatile uint32_t scheduler_enabled = 0;
-static uint32_t timer_ticks = 0;
-
-extern void task_switch_asm(uint32_t* old_esp, uint32_t new_esp);
 
 
 uint32_t get_scheduler_status(){
@@ -37,9 +35,7 @@ static task_t* find_next_task() {
     return current_task;
 }
 
-void scheduler_timer_handler(registers_t* regs) {
-    timer_ticks++;
-    
+void scheduler_tick(registers_t* regs) {
     if (!scheduler_enabled || !current_task) {
         return;
     }
@@ -56,7 +52,6 @@ void scheduler_init() {
     current_task = 0;
     next_task_id = 0;
     scheduler_enabled = 0;
-    timer_ticks = 0;
     
     printf("{FG(0,255,0)}Scheduler initialized\n");
 }
@@ -66,9 +61,6 @@ void scheduler_start() {
         printf("{FG(255,0,0)}Scheduler: No tasks to run\n");
         return;
     }
-    
-    printf("{FG(0,255,255)}Registering scheduler timer handler for IRQ0...\n");
-    idt_register_irq_handler(0, scheduler_timer_handler);
     
     current_task = task_list_head;
     current_task->state = TASK_STATE_RUNNING;
@@ -154,8 +146,8 @@ void task_yield() {
 void task_sleep(uint32_t ms) {
     if (!current_task) return;
     
-    uint32_t target = timer_ticks + ms;
-    while (timer_ticks < target) {
+    uint64_t target = pit_get_ticks() + ms;
+    while (pit_get_ticks() < target) {
         task_yield();
     }
 }

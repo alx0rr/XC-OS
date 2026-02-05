@@ -46,6 +46,7 @@ void task_sleep(uint32_t ms);
 
 task_t* scheduler_get_current_task();
 void scheduler_switch_task(registers_t* regs);
+void scheduler_tick(registers_t* regs);
 
 void scheduler_print_tasks();
 
