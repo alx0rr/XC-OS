@@ -80,6 +80,10 @@ echo "Compiling PIT Driver..."
 gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/timer/pit.c -o $build_dir/pit.o
 [ $? -ne 0 ] && echo "Error compiling PIT Driver" && exit 1
 
+echo "Compiling PC Speaker Driver..."
+gcc -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector -I$includes_src -c $drivers_src/sound/pcspk.c -o $build_dir/pcspk.o
+[ $? -ne 0 ] && echo "Error compiling PC Speaker Driver" && exit 1
+
 echo "Assembling IDT/ISR..."
 nasm -f elf32 $kernel_src/interrupts/isr.asm -o $build_dir/isr.o
 [ $? -ne 0 ] && echo "Error assembling ISR" && exit 1
@@ -106,7 +110,7 @@ ld -m elf_i386 -T "$src_dir/linker.ld" -o "$build_dir/kernel.bin" \
     "$build_dir/pmm.o" "$build_dir/vmm.o" "$build_dir/framebuffer.o" "$build_dir/text.o" \
     "$build_dir/string.o" "$build_dir/keyboard.o" "$build_dir/time.o" \
     "$build_dir/random.o" "$build_dir/cpu.o" "$build_dir/idt.o" \
-    "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o" "$build_dir/scheduler.o" "$build_dir/pit.o"
+    "$build_dir/isr.o" "$build_dir/ata.o" "$build_dir/xcfs.o" "$build_dir/scheduler.o" "$build_dir/pit.o" "$build_dir/pcspk.o"
 [ $? -ne 0 ] && echo "Error linking Kernel" && exit 1
 
 KERNEL_SIZE=$(($KERNEL_SECTORS * 512))
@@ -140,3 +144,4 @@ echo "Stage 2:        $SIZE_STAGE2 bytes"
 echo "Kernel:         $SIZE_KERNEL bytes"
 echo "Total Image:    $SIZE_TOTAL bytes (${IMAGE_SIZE_MB} MB)"
 echo "Output: $build_dir/xcos.img"
+

@@ -12,6 +12,7 @@
 #include "../include/graphics/framebuffer.h"
 #include "../include/scheduler/scheduler.h"
 #include "../include/timer/pit.h"
+#include "../include/sound/pcspk.h"
 #include "../lib/string.h"
 #include "../lib/time.h"
 #include "../lib/io.h"
@@ -585,6 +586,66 @@ void cmd_pitbench(void) {
            ((elapsed * 10000) / 5000) % 100);
 }
 
+void cmd_beep(int argc, char** argv) {
+    if (argc < 2) {
+        printf("{FG(255,0,0)}Usage: beep <frequency> <duration_ms>\n");
+        return;
+    }
+    
+    u32 frequency = 0;
+    for (int i = 0; argv[0][i]; i++) {
+        if (argv[0][i] >= '0' && argv[0][i] <= '9') {
+            frequency = frequency * 10 + (argv[0][i] - '0');
+        } else {
+            printf("{FG(255,0,0)}Invalid frequency\n");
+            return;
+        }
+    }
+    
+    u32 duration = 0;
+    for (int i = 0; argv[1][i]; i++) {
+        if (argv[1][i] >= '0' && argv[1][i] <= '9') {
+            duration = duration * 10 + (argv[1][i] - '0');
+        } else {
+            printf("{FG(255,0,0)}Invalid duration\n");
+            return;
+        }
+    }
+    
+    if (frequency < 20 || frequency > 20000) {
+        printf("{FG(255,0,0)}Frequency must be between 20 and 20000 Hz\n");
+        return;
+    }
+    
+    printf("{FG(0,255,0)}Playing %u Hz for %u ms...\n", frequency, duration);
+    pcspk_beep(frequency, duration);
+}
+
+void cmd_hb(void) {
+    printf("{FG(255,255,0)}Playing Happy Birthday...\n");
+    
+    u32 notes[] = {
+        262, 262, 294, 262, 349, 330,
+        262, 262, 294, 262, 392, 349,
+        262, 262, 523, 440, 349, 330, 294,
+        466, 466, 440, 349, 392, 349
+    };
+    
+    u32 durations[] = {
+        400, 400, 800, 800, 800, 1600,
+        400, 400, 800, 800, 800, 1600,
+        400, 400, 800, 800, 800, 800, 1600,
+        400, 400, 800, 800, 800, 1600
+    };
+    
+    for (int i = 0; i < 25; i++) {
+        pcspk_play_note(notes[i], durations[i]);
+        pit_sleep(50);
+    }
+    
+    printf("{FG(0,255,0)}Done!\n");
+}
+
 
 
 void print_fps(void) {
@@ -650,6 +711,8 @@ void cmd_help(void) {
 
     printf("{FG(0,255,255)}=== Other Commands ===\n");
     printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
+    printf("  {FG(255,255,0)}beep{FG(255,255,255)} <f> <d> - Play beep (freq, duration)\n");
+    printf("  {FG(255,255,0)}hb{FG(255,255,255)}        - Play Happy Birthday\n");
     printf("\n");
 }
 
@@ -734,6 +797,8 @@ void cmd(){
         else if (strcmp(cmd, "ps")       == 0)  scheduler_print_tasks();
         else if (strcmp(cmd, "taskdemo") == 0)  cmd_taskdemo();
         else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
+        else if (strcmp(cmd, "beep")     == 0)  cmd_beep(argc, args);
+        else if (strcmp(cmd, "hb")       == 0)  cmd_hb();
         else if (strcmp(cmd, "poweroff") == 0)  poweroff(); // bruh
         else if (strcmp(cmd, "fps") == 0)  print_fps();
         else if (strcmp(cmd, "reboot")   == 0) {

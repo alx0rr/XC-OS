@@ -10,6 +10,7 @@
 #include "../include/input/keyboard.h"
 #include "../include/scheduler/scheduler.h"
 #include "../include/timer/pit.h"
+#include "../include/sound/pcspk.h"
 #include "../include/graphics/framebuffer.h"
 #include "../lib/types.h"
 
@@ -32,6 +33,8 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} IDT initialized\n");
     pit_init(1000);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIT initialized (1000 Hz)\n");
+    pcspk_init();
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PC Speaker initialized\n");
     keyboard_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Keyboard initialized\n");
     ata_init();
