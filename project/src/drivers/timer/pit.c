@@ -11,6 +11,11 @@ static void pit_irq_handler(registers_t* regs) {
     
     scheduler_tick(regs);
     
+    if (pit_ticks % 16 == 0) {
+        extern void fb_swap_if_dirty(void);
+        fb_swap_if_dirty();
+    }
+    
     outb(0x20, 0x20);
 }
 

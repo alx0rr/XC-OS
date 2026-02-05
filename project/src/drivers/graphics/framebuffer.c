@@ -126,3 +126,10 @@ void fb_swap_task(void) {
 void fb_mark_dirty(void) {
     fb_dirty = 1;
 }
+
+void fb_swap_if_dirty(void) {
+    if (fb_dirty && backbuffer) {
+        fb_swap_buffers();
+        fb_dirty = 0;
+    }
+}
