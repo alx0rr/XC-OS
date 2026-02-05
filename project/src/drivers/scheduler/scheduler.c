@@ -15,7 +15,6 @@ uint32_t get_scheduler_status(){
     return scheduler_enabled;
 }
 
-
 static task_t* find_next_task() {
     if (!current_task) return task_list_head;
     
@@ -53,7 +52,7 @@ void scheduler_init() {
     next_task_id = 0;
     scheduler_enabled = 0;
     
-    printf("{FG(0,255,0)}[OK]{FG(255,255,255)}Scheduler initialized\n");
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Scheduler initialized\n");
 }
 
 void scheduler_start() {

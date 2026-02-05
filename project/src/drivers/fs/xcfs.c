@@ -79,7 +79,7 @@ void xcfs_init(uint8_t drive) {
     }
     memcpy(&xcfs_header, buffer, sizeof(xcfs_header_t));
     if (xcfs_header.magic != XCFS_MAGIC || xcfs_header.version != XCFS_VERSION) {
-        printf("{FG(255,0,0}[!]{FG(255,165,0)}XCFS v2 not found, formatting...\n");
+        printf("{FG(255,0,0}[!]{FG(0,0,0)} XCFS v2 not found, formatting...\n");
         xcfs_format(drive, 131072);
         return;
     }
