@@ -53,7 +53,7 @@ void scheduler_init() {
     next_task_id = 0;
     scheduler_enabled = 0;
     
-    printf("{FG(0,255,0)}Scheduler initialized\n");
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)}Scheduler initialized\n");
 }
 
 void scheduler_start() {

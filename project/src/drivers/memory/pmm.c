@@ -163,7 +163,6 @@ static uint8_t remove_specific_block(uint32_t order, void* target) {
 void init_pmm() {
     mmap.count = *(uint32_t*)MMAP_COUNT_ADDR;
     mmap.entries = (mmap_entry_t*)MMAP_ADDR;
-    printf("PMM Init: mmap.count = %u\n", mmap.count);
     for (uint32_t i = 0; i < MAX_ORDER; i++) {
         free_lists[i] = 0;
         list_locks[i].lock = 0;
@@ -174,13 +173,6 @@ void init_pmm() {
     uint32_t max_end = HEAP_START;
     uint32_t total_usable = 0;
     for (uint32_t i = 0; i < mmap.count; i++) {
-        printf("Region %u: base=0x%x%x len=0x%x%x type=%u\n",
-               i,
-               (uint32_t)(mmap.entries[i].base_addr >> 32),
-               (uint32_t)(mmap.entries[i].base_addr),
-               (uint32_t)(mmap.entries[i].length >> 32),
-               (uint32_t)(mmap.entries[i].length),
-               mmap.entries[i].type);
         if (mmap.entries[i].type == MMAP_TYPE_USABLE) {
             uint64_t base = mmap.entries[i].base_addr;
             uint64_t length = mmap.entries[i].length;
@@ -237,8 +229,6 @@ void init_pmm() {
         fast_memset(bitmap, 0, bitmap_size);
         fast_memset(order_map, 0, max_blocks);
     }
-    printf("PMM initialized: total_memory=%uMB, max_blocks=%u\n",
-           total_memory / (1024*1024), max_blocks);
 }
 memory_map_t get_mmap() {
     return mmap;

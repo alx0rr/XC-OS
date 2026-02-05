@@ -79,7 +79,7 @@ void xcfs_init(uint8_t drive) {
     }
     memcpy(&xcfs_header, buffer, sizeof(xcfs_header_t));
     if (xcfs_header.magic != XCFS_MAGIC || xcfs_header.version != XCFS_VERSION) {
-        printf("{FG(255,165,0)}XCFS v2 not found, formatting...\n");
+        printf("{FG(255,0,0}[!]{FG(255,165,0)}XCFS v2 not found, formatting...\n");
         xcfs_format(drive, 131072);
         return;
     }
@@ -94,7 +94,7 @@ void xcfs_init(uint8_t drive) {
         memcpy(&xcfs_entries[i * entries_per_sector], buffer, XCFS_SECTOR_SIZE);
     }
     xcfs_ctx.initialized = 1;
-    printf("{FG(0,255,0)}XCFS v2 initialized (%u entries)\n", xcfs_header.file_count);
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255}XCFS v2 initialized (%u entries)\n", xcfs_header.file_count);
 }
 void xcfs_format(uint8_t drive, uint32_t total_sectors) {
     xcfs_header.magic = XCFS_MAGIC;
@@ -130,7 +130,7 @@ void xcfs_format(uint8_t drive, uint32_t total_sectors) {
     xcfs_ctx.drive = drive;
     xcfs_ctx.initialized = 1;
     strcpy(xcfs_ctx.cwd, "/");
-    printf("{FG(0,255,0)}XCFS v2 formatted with / and /bin\n");
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)}XCFS v2 formatted with / and /bin\n");
 }
 int xcfs_mkdir(const char* path) {
     if (!xcfs_ctx.initialized) return -1;

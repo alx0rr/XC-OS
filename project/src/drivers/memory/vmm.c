@@ -52,7 +52,7 @@ void vmm_init() {
         vmm_map_page(addr, addr, PAGE_PRESENT | PAGE_WRITE);
     }
     current_directory = kernel_directory;
-    printf("{FG(0,255,0)}VMM initialized: %u pages mapped\n", total_mapped_pages);
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)}VMM initialized: %u pages mapped\n", total_mapped_pages);
 }
 void vmm_enable_paging() {
     if (!kernel_directory) {
