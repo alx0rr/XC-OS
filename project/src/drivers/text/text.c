@@ -225,12 +225,11 @@ void printf(const char *format, ...) {
 			}
 		}
 	}
-	if (get_scheduler_status() == 0) {
-		fb_swap_buffers();
-	}
+	fb_mark_dirty();
 }
 void clear() {
     fb_fill(bg_color);
     xpos = X_MARGIN;
     ypos = Y_MARGIN;
+    fb_mark_dirty();
 }

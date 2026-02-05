@@ -8,6 +8,7 @@
 
 static uint8_t* backbuffer = NULL;
 volatile uint32_t fb_fps = 0;
+static volatile uint8_t fb_dirty = 0;
 
 static uint8_t* fb_get_buffer() {
     return backbuffer ? backbuffer : vbe_get_framebuffer();
@@ -114,7 +115,14 @@ void fb_copy_to_backbuffer() {
 
 void fb_swap_task(void) {
     while (1) {
-        fb_swap_buffers();
-        task_yield();
+        task_sleep(16);
+        if (fb_dirty) {
+            fb_swap_buffers();
+            fb_dirty = 0;
+        }
     }
+}
+
+void fb_mark_dirty(void) {
+    fb_dirty = 1;
 }

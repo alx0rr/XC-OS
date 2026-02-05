@@ -14,5 +14,6 @@ uint8_t* fb_init_backbuffer();
 void fb_copy_to_backbuffer();
 int8_t fb_swap_buffers();
 void fb_swap_task();
+void fb_mark_dirty();
 
 #endif
