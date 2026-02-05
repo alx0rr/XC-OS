@@ -186,7 +186,7 @@ dap_current_segment: dw 0
 dap_current_offset: dw 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'Loading...', 0
+loading_kernel_msg: db 'Calling the killer to kill x86 creators', 0
 dot_msg: db '.', 0
 newline_msg: db 13, 10, 0
 kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
