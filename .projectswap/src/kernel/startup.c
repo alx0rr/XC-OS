@@ -41,6 +41,16 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS File System initialized\n");
     scheduler_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Task Scheduler initialized\n");
+    /*
+    uint8_t* buffer = fb_init_backbuffer();
+    if (buffer != NULL) {
+        fb_copy_to_backbuffer();
+        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Video Back Buffer initialized [0x%x]\n", buffer);
+        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} FB Swap via timer (60 FPS)\n");
+    } else {
+        printf("{FG(255,0,0)}[FAIL]{FG(255,255,255)} Video Back Buffer initialization failed\n");
+    }
+    */
 
     printf("\n");
     pcspk_play_note(1000, 50);

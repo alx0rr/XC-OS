@@ -5,19 +5,11 @@
 
 static volatile u64 pit_ticks = 0;
 static u32 pit_frequency = 0;
-static u32 swap_counter = 0;
 
 static void pit_irq_handler(registers_t* regs) {
     pit_ticks++;
-    swap_counter++;
     
     scheduler_tick(regs);
-    
-    if (swap_counter >= 50) {
-        swap_counter = 0;
-        extern void fb_swap_if_dirty(void);
-        fb_swap_if_dirty();
-    }
     
     outb(0x20, 0x20);
 }

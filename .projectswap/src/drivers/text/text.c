@@ -225,9 +225,11 @@ void printf(const char *format, ...) {
 			}
 		}
 	}
+	fb_mark_dirty();
 }
 void clear() {
     fb_fill(bg_color);
     xpos = X_MARGIN;
     ypos = Y_MARGIN;
+    fb_mark_dirty();
 }

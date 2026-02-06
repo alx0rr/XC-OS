@@ -646,12 +646,6 @@ void cmd_hb(void) {
     printf("{FG(0,255,0)}Done!\n");
 }
 
-
-
-void print_fps(void) {
-    printf("{FG(0,255,0)}FPS:{FG(255,255,255)}%x\n", get_fps());
-}
-
 void poweroff() {
     outw(0x604, 0x2000);
     outw(0xB004, 0x2000);
@@ -800,7 +794,6 @@ void cmd(){
         else if (strcmp(cmd, "beep")     == 0)  cmd_beep(argc, args);
         else if (strcmp(cmd, "hb")       == 0)  cmd_hb();
         else if (strcmp(cmd, "poweroff") == 0)  poweroff(); // bruh
-        else if (strcmp(cmd, "fps") == 0)  print_fps();
         else if (strcmp(cmd, "reboot")   == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");
             outb(0x64, 0xFE);
