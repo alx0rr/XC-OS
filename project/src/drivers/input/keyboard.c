@@ -229,15 +229,15 @@ void keyboard_init(void) {
     
     keyboard_send_data(0xFF);
     uint8_t response = keyboard_read_data();
-    if (response != 0xFA) {
+    /* if (response != 0xFA) {
         printf("{FG(255,165,0)}Warning: Keyboard reset response: 0x%x\n", response);
-    }
+    } */
     
     keyboard_send_data(0xF4);
     response = keyboard_read_data();
-    if (response != 0xFA) {
+    /* if (response != 0xFA) {
         printf("{FG(255,165,0)}Warning: Keyboard enable response: 0x%x\n", response);
-    }
+    } */
     
     idt_register_irq_handler(1, keyboard_irq_handler);
     
