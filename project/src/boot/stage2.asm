@@ -93,7 +93,7 @@ load_kernel:
     
     mov si, vbe_init_msg
     call prnt
-    mov cx, 0x411B
+    mov cx, 0x4118
     call init_vbe_mode
     cmp ax, 0x004F
     jne kernel_load_error

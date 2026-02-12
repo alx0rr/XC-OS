@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#define VBE_MODE 0x411B
+#define VBE_MODE 0x4118
 typedef struct {
     uint16_t mode_attributes;
     uint8_t  window_a_attr;
