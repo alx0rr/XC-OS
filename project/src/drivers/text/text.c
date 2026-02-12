@@ -13,18 +13,18 @@ uint16_t xpos = X_MARGIN;
 uint16_t ypos = Y_MARGIN;
 uint32_t bg_color = 0;
 uint32_t fg_color = 0xFFFFFF;
-uint8_t current_font_scale = 2;
+uint8_t current_font_scale = 3;
 void text_init() {
     uint16_t width = fb_get_width();
     uint16_t height = fb_get_height();
     if (width <= 640 && height <= 480) {
         current_font_scale = 1;
     } else if (width <= 1024 && height <= 768) {
-        current_font_scale = 2;
-    } else if (width <= 1920 && height <= 1080) {
-        current_font_scale = 2;
-    } else {
         current_font_scale = 3;
+    } else if (width <= 1920 && height <= 1080) {
+        current_font_scale = 3;
+    } else {
+        current_font_scale = 4;
     }
     xpos = X_MARGIN;
     ypos = Y_MARGIN;
