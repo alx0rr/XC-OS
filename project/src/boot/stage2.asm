@@ -93,7 +93,7 @@ load_kernel:
     
     mov si, vbe_init_msg
     call prnt
-    mov cx, 0x4118
+    mov cx, 0x411B
     call init_vbe_mode
     cmp ax, 0x004F
     jne kernel_load_error
@@ -186,8 +186,8 @@ dap_current_segment: dw 0
 dap_current_offset: dw 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'Calling the killer to kill x86 creators', 0
-dot_msg: db '.', 0
+loading_kernel_msg: db 'From Alx0rr and Forker-25 to humans', 0
+dot_msg: db '!', 0
 newline_msg: db 13, 10, 0
 kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
 no_lba_msg: db 'LBA not supported!', 13, 10, 0
