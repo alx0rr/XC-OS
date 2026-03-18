@@ -23,6 +23,7 @@ void startup() {
     init_pmm();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Memory Manager initialized\n");
     vmm_init();
+    vmm_enable_paging();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Virtual Memory Manager initialized\n");
     cpu_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} CPU detected\n");

@@ -55,16 +55,28 @@ void cmd_cat(int argc, char** argv) {
         printf("{FG(255,0,0)}Usage: cat <file>\n");
         return;
     }
-    uint8_t buffer[8192];
-    if (xcfs_read(argv[0], buffer, 8192) == 0) {
+    xcfs_dirent_t info;
+    if (xcfs_stat(argv[0], &info) < 0) {
+        printf("{FG(255,0,0)}cat: %s: no such file\n", argv[0]);
+        return;
+    }
+    uint32_t size = info.size > 0 ? info.size + 1 : 1;
+    uint8_t* buffer = (uint8_t*)pmm_malloc(size);
+    if (!buffer) {
+        printf("{FG(255,0,0)}cat: out of memory\n");
+        return;
+    }
+    if (xcfs_read(argv[0], buffer, size - 1) == 0) {
+        buffer[size - 1] = 0;
         printf("{FG(0,255,0)}");
-        for (int i = 0; i < 8192 && buffer[i]; i++) {
+        for (uint32_t i = 0; i < size - 1 && buffer[i]; i++) {
             printf("%c", buffer[i]);
         }
         printf("{FG(255,255,255)}\n");
     } else {
-        printf("{FG(255,0,0)}cat: %s: no such file\n", argv[0]);
+        printf("{FG(255,0,0)}cat: %s: read error\n", argv[0]);
     }
+    pmm_free(buffer);
 }
 
 void cmd_echo(int argc, char** argv) {
@@ -134,14 +146,22 @@ void cmd_cp(int argc, char** argv) {
         printf("{FG(255,0,0)}Usage: cp <source> <dest>\n");
         return;
     }
-    uint8_t buffer[8192];
-    if (xcfs_read(argv[0], buffer, 8192) != 0) {
+    xcfs_dirent_t info;
+    if (xcfs_stat(argv[0], &info) < 0) {
         printf("{FG(255,0,0)}cp: cannot read '%s'\n", argv[0]);
         return;
     }
-    uint32_t size = 0;
-    for (int i = 0; i < 8192 && buffer[i]; i++) size++;
-
+    uint32_t size = info.size > 0 ? info.size : 1;
+    uint8_t* buffer = (uint8_t*)pmm_malloc(size);
+    if (!buffer) {
+        printf("{FG(255,0,0)}cp: out of memory\n");
+        return;
+    }
+    if (xcfs_read(argv[0], buffer, size) != 0) {
+        printf("{FG(255,0,0)}cp: cannot read '%s'\n", argv[0]);
+        pmm_free(buffer);
+        return;
+    }
     xcfs_delete(argv[1]);
     if (xcfs_create(argv[1], size) == 0) {
         xcfs_write(argv[1], buffer, size);
@@ -149,6 +169,7 @@ void cmd_cp(int argc, char** argv) {
     } else {
         printf("{FG(255,0,0)}cp: cannot create '%s'\n", argv[1]);
     }
+    pmm_free(buffer);
 }
 
 void cmd_mv(int argc, char** argv) {
@@ -665,7 +686,6 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}timer{FG(255,255,255)}     - Show timer ticks\n");
     printf("  {FG(255,255,0)}sleep{FG(255,255,255)} <ms>- Sleep for milliseconds\n");
     printf("  {FG(255,255,0)}countdown{FG(255,255,255)} <s> - Countdown timer\n");
-    printf("  {FG(255,255,0)}fps{FG(255,255,255)} <s> - Show current fps\n");
     printf("\n");
 
     printf("{FG(0,255,255)}=== Directory Commands ===\n");
@@ -684,7 +704,6 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}mv{FG(255,255,255)} <s> <d> - Move file\n");
     printf("  {FG(255,255,0)}echo{FG(255,255,255)} <txt> - Print text\n");
     printf("  {FG(255,255,0)}echo{FG(255,255,255)} <t> > <f> - Write to file\n");
-    printf("  {FG(255,255,0)}stat{FG(255,255,255)} <f>  - File information\n");
     printf("\n");
 
     printf("{FG(0,255,255)}=== Test & Debug Commands ===\n");

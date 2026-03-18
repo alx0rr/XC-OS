@@ -1,5 +1,6 @@
 #include "time.h"
 #include "io.h"
+#include "../include/timer/pit.h"
 static uint8_t cmos_read(uint8_t reg) {
     outb(0x70, reg);
     return inb(0x71);
@@ -60,12 +61,6 @@ datetime_t time_unix_to_datetime(uint32_t ts) {
 uint32_t time_get_unix_timestamp(void) {
     return time_datetime_to_unix(time_get_datetime());
 }
-static uint32_t boot_time = 0;
 uint32_t get_uptime(void) {
-    if (boot_time == 0) {
-        boot_time = time_get_unix_timestamp();
-        return 0;
-    }
-    uint32_t current_time = time_get_unix_timestamp();
-    return (current_time - boot_time) * 1000;
+    return (uint32_t)pit_get_ticks();
 }

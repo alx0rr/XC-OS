@@ -52,7 +52,6 @@ void vmm_init() {
         vmm_map_page(addr, addr, PAGE_PRESENT | PAGE_WRITE);
     }
     current_directory = kernel_directory;
-    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} VMM initialized: %u pages mapped\n", total_mapped_pages);
 }
 void vmm_enable_paging() {
     if (!kernel_directory) {
@@ -63,7 +62,6 @@ void vmm_enable_paging() {
     load_page_directory(dir_phys);
     enable_paging_asm();
     __asm__ volatile("mov %%cr3, %%eax; mov %%eax, %%cr3" ::: "eax");
-    printf("{FG(0,255,0)}Paging enabled at 0x%x\n", dir_phys);
 }
 void vmm_map_page(uint32_t virt, uint32_t phys, uint32_t flags) {
     if (!kernel_directory) return;
