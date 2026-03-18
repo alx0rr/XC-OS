@@ -1,5 +1,6 @@
 #include "../../include/memory/vmm.h"
 #include "../../include/memory/pmm.h"
+#include "../../include/graphics/vbe.h"
 #include "../../include/text.h"
 #include "../../lib/string.h"
 static page_directory_t* kernel_directory = 0;
@@ -20,7 +21,13 @@ static inline void enable_paging_asm() {
 }
 static page_table_t* vmm_get_page_table(page_directory_t* dir, uint32_t virt, uint8_t create) {
     uint32_t pd_index = virt >> 22;
-    if (!(dir->entries[pd_index] & PAGE_PRESENT)) {
+    uint32_t pde = dir->entries[pd_index];
+
+    if (pde & 0x80) {
+        return 0;
+    }
+
+    if (!(pde & PAGE_PRESENT)) {
         if (!create) return 0;
         void* table_phys = pmm_malloc(PAGE_SIZE);
         if (!table_phys) return 0;
@@ -29,7 +36,7 @@ static page_table_t* vmm_get_page_table(page_directory_t* dir, uint32_t virt, ui
         memset(table, 0, PAGE_SIZE);
         return table;
     }
-    uint32_t table_phys = dir->entries[pd_index] & 0xFFFFF000;
+    uint32_t table_phys = pde & 0xFFFFF000;
     return (page_table_t*)table_phys;
 }
 void vmm_init() {
@@ -42,15 +49,25 @@ void vmm_init() {
     for (uint32_t i = 0; i < 256; i++) {
         kernel_page_tables_phys[i] = 0;
     }
+
+    uint32_t cr4;
+    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= 0x10;
+    __asm__ volatile("mov %0, %%cr4" : : "r"(cr4));
+
     uint32_t identity_end = 0x10000000;
-    for (uint32_t addr = 0; addr < identity_end; addr += PAGE_SIZE) {
-        vmm_map_page(addr, addr, PAGE_PRESENT | PAGE_WRITE);
+    for (uint32_t addr = 0; addr < identity_end; addr += 0x400000) {
+        uint32_t pd_index = addr >> 22;
+        kernel_directory->entries[pd_index] = addr | PAGE_PRESENT | PAGE_WRITE | 0x80;
     }
+
     uint32_t fb_start = 0xE0000000;
-    uint32_t fb_end = 0xE2000000;
-    for (uint32_t addr = fb_start; addr < fb_end; addr += PAGE_SIZE) {
-        vmm_map_page(addr, addr, PAGE_PRESENT | PAGE_WRITE);
+    uint32_t fb_end   = 0xE2000000;
+    for (uint32_t addr = fb_start; addr < fb_end; addr += 0x400000) {
+        uint32_t pd_index = addr >> 22;
+        kernel_directory->entries[pd_index] = addr | PAGE_PRESENT | PAGE_WRITE | 0x80;
     }
+
     current_directory = kernel_directory;
 }
 void vmm_enable_paging() {
@@ -58,6 +75,14 @@ void vmm_enable_paging() {
         printf("{FG(255,0,0)}VMM Error: kernel_directory is NULL\n");
         return;
     }
+
+    uint32_t fb = vbe_mode_info_data.framebuffer & ~0x3FFFFF;
+    uint32_t fb_end = fb + 0x800000;
+    for (uint32_t addr = fb; addr < fb_end; addr += 0x400000) {
+        uint32_t pd_index = addr >> 22;
+        kernel_directory->entries[pd_index] = addr | PAGE_PRESENT | PAGE_WRITE | 0x80;
+    }
+
     uint32_t dir_phys = (uint32_t)kernel_directory;
     load_page_directory(dir_phys);
     enable_paging_asm();
@@ -87,6 +112,12 @@ void vmm_unmap_page(uint32_t virt) {
 }
 uint32_t vmm_get_physical(uint32_t virt) {
     if (!kernel_directory) return 0;
+    uint32_t pd_index = virt >> 22;
+    uint32_t pde = kernel_directory->entries[pd_index];
+    if (!(pde & PAGE_PRESENT)) return 0;
+    if (pde & 0x80) {
+        return (pde & 0xFFC00000) | (virt & 0x3FFFFF);
+    }
     page_table_t* table = vmm_get_page_table(kernel_directory, virt, 0);
     if (!table) return 0;
     uint32_t pt_index = (virt >> 12) & 0x3FF;
@@ -204,6 +235,10 @@ void vmm_flush_page(uint32_t virt) {
 }
 uint8_t vmm_is_mapped(uint32_t virt) {
     if (!kernel_directory) return 0;
+    uint32_t pd_index = virt >> 22;
+    uint32_t pde = kernel_directory->entries[pd_index];
+    if (!(pde & PAGE_PRESENT)) return 0;
+    if (pde & 0x80) return 1;
     page_table_t* table = vmm_get_page_table(kernel_directory, virt, 0);
     if (!table) return 0;
     uint32_t pt_index = (virt >> 12) & 0x3FF;
