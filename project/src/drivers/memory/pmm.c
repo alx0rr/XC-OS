@@ -172,7 +172,10 @@ void init_pmm() {
     actual_heap_size = 0;
 
     uint64_t detected_total = 0;
+    uint64_t total_usable_bytes = 0;
     for (uint32_t i = 0; i < mmap.count; i++) {
+        if (mmap.entries[i].type != MMAP_TYPE_USABLE) continue;
+        total_usable_bytes += mmap.entries[i].length;
         uint64_t entry_end = mmap.entries[i].base_addr + mmap.entries[i].length;
         if (entry_end > detected_total)
             detected_total = entry_end;
@@ -180,8 +183,9 @@ void init_pmm() {
     if (detected_total > HEAP_MAX_PHYS)
         detected_total = HEAP_MAX_PHYS;
 
-    printf("{FG(0,255,255)}E820: detected %u MB RAM\n{FG(255,255,255)}",
-           (uint32_t)(detected_total / (1024 * 1024)));
+    printf("{FG(0,255,255)}E820: detected %u MB RAM (%u MB usable)\n{FG(255,255,255)}",
+           (uint32_t)(detected_total / (1024 * 1024)),
+           (uint32_t)(total_usable_bytes / (1024 * 1024)));
 
     uint32_t max_end = HEAP_START;
     uint32_t total_usable = 0;
