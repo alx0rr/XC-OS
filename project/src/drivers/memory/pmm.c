@@ -170,6 +170,19 @@ void init_pmm() {
     total_memory = 0;
     used_memory = 0;
     actual_heap_size = 0;
+
+    uint64_t detected_total = 0;
+    for (uint32_t i = 0; i < mmap.count; i++) {
+        uint64_t entry_end = mmap.entries[i].base_addr + mmap.entries[i].length;
+        if (entry_end > detected_total)
+            detected_total = entry_end;
+    }
+    if (detected_total > HEAP_MAX_PHYS)
+        detected_total = HEAP_MAX_PHYS;
+
+    printf("{FG(0,255,255)}E820: detected %u MB RAM\n{FG(255,255,255)}",
+           (uint32_t)(detected_total / (1024 * 1024)));
+
     uint32_t max_end = HEAP_START;
     uint32_t total_usable = 0;
     for (uint32_t i = 0; i < mmap.count; i++) {
@@ -182,12 +195,12 @@ void init_pmm() {
                 length -= (HEAP_START - base);
                 base = HEAP_START;
             }
-            if (base >= (uint64_t)HEAP_START + HEAP_SIZE) continue;
+            if (base >= detected_total) continue;
             uint32_t start_addr = (uint32_t)base;
             uint64_t end64 = base + length;
             uint32_t end_addr;
-            if (end64 > (uint64_t)HEAP_START + HEAP_SIZE) {
-                end_addr = HEAP_START + HEAP_SIZE;
+            if (end64 > detected_total) {
+                end_addr = (uint32_t)detected_total;
             } else {
                 end_addr = (uint32_t)end64;
             }
@@ -218,8 +231,8 @@ void init_pmm() {
     if (total_usable > 0) {
         actual_heap_size = (max_end > HEAP_START) ? (max_end - HEAP_START) : 0;
     } else {
-        printf("[ERROR] No usable memory regions from E820!\n");
-        printf("[ERROR] Check QEMU/BIOS E820 implementation\n");
+        printf("{FG(255,0,0)}[ERROR] No usable memory regions from E820!\n");
+        printf("[ERROR] Check QEMU/BIOS E820 implementation\n{FG(255,255,255)}");
         actual_heap_size = 0;
         total_memory = 0;
     }
