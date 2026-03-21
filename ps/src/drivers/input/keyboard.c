@@ -1,4 +1,5 @@
 #include "../../include/input/keyboard.h"
+#include "../../include/scheduler/scheduler.h"
 #include "../../lib/io.h"
 #include "../../include/text.h"
 #include "../../include/interrupts/idt.h"
@@ -250,7 +251,11 @@ void keyboard_init(void) {
 
 static char keyboard_getchar(void) {
     while (buffer_head == buffer_tail) {
-        asm volatile("hlt");
+        if (get_scheduler_status()) {
+            task_yield();
+        } else {
+            asm volatile("hlt");
+        }
     }
     
     char c = input_buffer[buffer_tail];

@@ -161,6 +161,7 @@ void task_exit(void) {
 
 void task_yield(void) {
     if (!scheduler_enabled || !current_task) return;
+    current_task->time_used = current_task->time_slice;
     asm volatile("int $0x20");
 }
 
