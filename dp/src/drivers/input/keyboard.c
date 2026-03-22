@@ -226,25 +226,24 @@ void keyboard_init(void) {
     keyboard_flush_buffer();
     
     keyboard_send_command(0xAE);
-    
+
     keyboard_send_data(0xFF);
-    uint8_t response = keyboard_read_data();
-    /* if (response != 0xFA) {
-        printf("{FG(255,165,0)}Warning: Keyboard reset response: 0x%x\n", response);
-    } */
-    
+    keyboard_read_data();
+    keyboard_read_data();
+
+    keyboard_flush_buffer();
+
     keyboard_send_data(0xF4);
-    response = keyboard_read_data();
-    /* if (response != 0xFA) {
-        printf("{FG(255,165,0)}Warning: Keyboard enable response: 0x%x\n", response);
-    } */
-    
+    keyboard_read_data();
+
+    keyboard_flush_buffer();
+
     idt_register_irq_handler(1, keyboard_irq_handler);
-    
+
     uint8_t mask = inb(0x21);
     mask &= ~(1 << 1);
     outb(0x21, mask);
-    
+
     keyboard_flush_buffer();
 }
 
