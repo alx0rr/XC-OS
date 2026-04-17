@@ -2,7 +2,7 @@
 <h1>XC Operating System</h1>
 
 [![GitHub Release](https://img.shields.io/github/v/release/alx0rr/XC-OS?style=flat-square&logo=github)](https://github.com/alx0rr/XC-OS/releases)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://github.com/alx0rr/XC-OS/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-EPL2.0-yellow.svg?style=flat-square)](https://github.com/alx0rr/XC-OS/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/website?down_message=failing&label=web&up_color=green&up_message=passing&url=https://xc-os-website.onrender.com/&style=flat-square)](https://xc-os-website.onrender.com/)
 [![Issues](https://img.shields.io/github/issues-raw/alx0rr/XC-OS.svg?maxAge=25000&style=flat-square)](https://github.com/alx0rr/XC-OS/issues)
 [![Pull requests](https://img.shields.io/github/issues-pr/alx0rr/XC-OS.svg?style=flat-square)](https://github.com/alx0rr/XC-OS/pulls)
