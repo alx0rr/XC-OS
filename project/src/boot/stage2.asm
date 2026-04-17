@@ -5,6 +5,7 @@ KERNEL_SECTORS equ 2017
 KERNEL_SIZE    equ KERNEL_SECTORS * 512
 
 stage2_start:
+    mov [boot_drive], dl
     mov ah, 0x00
     mov al, 0x03
     int 0x10
