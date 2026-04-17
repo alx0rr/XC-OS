@@ -69,7 +69,7 @@ static int ata_select_device(uint16_t io_base, uint8_t master) {
     return 1;
 }
 
-static void ata_set_lba48(ata_device_t* dev, uint32_t lba, uint8_t count) {
+static void ata_set_lba48(ata_device_t* dev, uint64_t lba, uint8_t count) {
     outb(dev->io_base + ATA_REG_DRIVE, (dev->master ? ATA_MASTER : ATA_SLAVE) | 0x40);
     outb(dev->io_base + ATA_REG_SECCOUNT, count);
     outb(dev->io_base + ATA_REG_LBA_LO, (lba >> 24) & 0xFF);

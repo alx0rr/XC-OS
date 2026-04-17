@@ -41,7 +41,7 @@ static void normalize_path(const char* path, char* normalized) {
 }
 
 static int is_path_protected(const char* path) {
-    return (strcmp(path, "/") == 0 || strcmp(path, "/bin") == 0);
+    return (strcmp(path, "/") == 0);
 }
 
 static int find_entry(const char* path) {
@@ -183,6 +183,7 @@ void xcfs_format(uint8_t drive, uint32_t total_sectors) {
     uint32_t entries_sectors = (XCFS_MAX_FILES + entries_per_sector - 1) / entries_per_sector;
     xcfs_ctx.bitmap_sectors = (total_sectors + 8 * XCFS_SECTOR_SIZE - 1) / (8 * XCFS_SECTOR_SIZE);
     xcfs_ctx.data_start = XCFS_START_SECTOR + 1 + entries_sectors + xcfs_ctx.bitmap_sectors;
+    
     strcpy(xcfs_entries[0].path, "/");
     xcfs_entries[0].type = XCFS_TYPE_DIR;
     xcfs_entries[0].flags = XCFS_FLAG_PROTECTED;
@@ -191,31 +192,26 @@ void xcfs_format(uint8_t drive, uint32_t total_sectors) {
     xcfs_entries[0].size = 0;
     xcfs_entries[0].created = 0;
     xcfs_entries[0].modified = 0;
-    xcfs_header.file_count = 1;
-    strcpy(xcfs_entries[1].path, "/bin");
-    xcfs_entries[1].type = XCFS_TYPE_DIR;
-    xcfs_entries[1].flags = XCFS_FLAG_PROTECTED;
-    xcfs_entries[1].parent_idx = 0;
-    xcfs_entries[1].start_sector = 0;
-    xcfs_entries[1].size = 0;
-    xcfs_entries[1].created = 0;
-    xcfs_entries[1].modified = 0;
-    xcfs_header.file_count = 2;
+    xcfs_header.file_count = 1; 
+    
     uint8_t buffer[XCFS_SECTOR_SIZE] = {0};
     memcpy(buffer, &xcfs_header, sizeof(xcfs_header_t));
     ata_write_sector(drive, XCFS_START_SECTOR, buffer);
+    
     memset(buffer, 0, sizeof(buffer));
     memcpy(buffer, xcfs_entries, XCFS_SECTOR_SIZE);
     ata_write_sector(drive, XCFS_START_SECTOR + 1, buffer);
+    
     uint32_t bitmap_start = XCFS_START_SECTOR + 1 + entries_sectors;
     memset(xcfs_ctx.bitmap, 0, XCFS_SECTOR_SIZE * xcfs_ctx.bitmap_sectors);
     for (uint32_t i = 0; i < xcfs_ctx.bitmap_sectors; i++) {
         ata_write_sector(drive, bitmap_start + i, &xcfs_ctx.bitmap[i * XCFS_SECTOR_SIZE]);
     }
+    
     xcfs_ctx.drive = drive;
     xcfs_ctx.initialized = 1;
     strcpy(xcfs_ctx.cwd, "/");
-    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS v%d formatted with / and /bin\n", XCFS_VERSION);
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS v%d formatted\n", XCFS_VERSION);
 }
 
 int xcfs_mkdir(const char* path) {
