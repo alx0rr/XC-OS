@@ -1,6 +1,9 @@
 [bits 16]
 [org 0x7e00]
 
+KERNEL_SECTORS equ 2017
+KERNEL_SIZE    equ KERNEL_SECTORS * 512
+
 stage2_start:
     mov ah, 0x00
     mov al, 0x03
@@ -22,12 +25,11 @@ load_kernel:
     jc .no_lba_support
     
     mov word [load_counter], 0
-    mov cx, 2017
+    mov cx, KERNEL_SECTORS
     mov word [dap_remaining_sectors], cx
     mov dword [dap_current_lba], 32
-    mov word [dap_current_segment], 0x1000
-    mov word [dap_current_offset], 0x0000
-    
+    mov dword [dap_current_flat], 0x10000
+
 .load_loop:
     mov cx, [dap_remaining_sectors]
     cmp cx, 0
@@ -48,10 +50,14 @@ load_kernel:
     mov si, dap
     mov byte [si], 0x10
     mov byte [si+1], 0
-    mov ax, [dap_current_offset]
+
+    mov eax, [dap_current_flat]
+    mov edx, eax
+    shr edx, 4
+    and eax, 0xF
     mov [si+4], ax
-    mov ax, [dap_current_segment]
-    mov [si+6], ax
+    mov [si+6], dx
+
     mov eax, [dap_current_lba]
     mov [si+8], eax
     mov dword [si+12], 0
@@ -61,22 +67,14 @@ load_kernel:
     int 0x13
     jc kernel_load_error
     
-    mov ax, [dap+2]
+    movzx eax, word [dap+2]
     sub [dap_remaining_sectors], ax
-    
-    movzx eax, ax
+
     add [dap_current_lba], eax
-    
-    shl ax, 9
-    add [dap_current_offset], ax
-    jnc .no_segment_wrap
-    
-    mov ax, [dap_current_segment]
-    add ax, 0x1000
-    mov [dap_current_segment], ax
-    mov word [dap_current_offset], 0
-    
-.no_segment_wrap:
+
+    shl eax, 9
+    add [dap_current_flat], eax
+
     inc word [load_counter]
     jmp .load_loop
     
@@ -128,7 +126,7 @@ protected_mode_start:
     
     mov esi, 0x10000
     mov edi, 0x100000
-    mov ecx, 258304
+    mov ecx, KERNEL_SIZE
     rep movsb
     
     jmp 0x08:0x100000
@@ -182,12 +180,11 @@ dap:
 
 dap_remaining_sectors: dw 0
 dap_current_lba: dd 0
-dap_current_segment: dw 0
-dap_current_offset: dw 0
+dap_current_flat: dd 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'github.com/alx0rr/XC-OS/ :)', 0
-dot_msg: db '.', 0
+loading_kernel_msg: db 'From Alx0rr and Forker-25 to humans', 0
+dot_msg: db '!', 0
 newline_msg: db 13, 10, 0
 kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
 no_lba_msg: db 'LBA not supported!', 13, 10, 0
