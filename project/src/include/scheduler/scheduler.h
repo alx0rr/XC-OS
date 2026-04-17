@@ -12,7 +12,8 @@ typedef enum {
     TASK_STATE_READY,
     TASK_STATE_RUNNING,
     TASK_STATE_BLOCKED,
-    TASK_STATE_TERMINATED
+    TASK_STATE_TERMINATED,
+    TASK_STATE_IDLE
 } task_state_t;
 
 typedef struct task {
@@ -38,6 +39,7 @@ typedef struct task {
 
 void scheduler_init();
 void scheduler_start();
+void idle_task();
 
 task_t* task_create(const char* name, void (*entry_point)(), uint32_t flags);
 void task_exit();
@@ -49,7 +51,6 @@ void scheduler_switch_task(registers_t* regs);
 void scheduler_tick(registers_t* regs);
 
 void scheduler_print_tasks();
-
 uint32_t get_scheduler_status();
 
 #endif
