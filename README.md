@@ -13,6 +13,12 @@ This Operating System is simple and example project, which contains Custom FS(XC
 The OS was created for hobby purposes, so it may contain errors, bugs and other shortcomings.
 Please think carefully before installing it on real hardware.
 
+
+<a href="https://xc-os-website.onrender.com/" target="_blank">
+  <img src="https://img.shields.io/badge/Visit-XC_OS_Website-000000?style=for-the-badge&logo=linux&logoColor=white" />
+</a>
+
+
 ---
 
 building the img file with build.sh:
