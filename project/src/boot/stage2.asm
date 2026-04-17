@@ -29,8 +29,9 @@ load_kernel:
     mov cx, KERNEL_SECTORS
     mov word [dap_remaining_sectors], cx
     mov dword [dap_current_lba], 32
-    mov dword [dap_current_flat], 0x10000
-
+    mov word [dap_current_segment], 0x1000
+    mov word [dap_current_offset], 0x0000
+    
 .load_loop:
     mov cx, [dap_remaining_sectors]
     cmp cx, 0
@@ -51,14 +52,10 @@ load_kernel:
     mov si, dap
     mov byte [si], 0x10
     mov byte [si+1], 0
-
-    mov eax, [dap_current_flat]
-    mov edx, eax
-    shr edx, 4
-    and eax, 0xF
+    mov ax, [dap_current_offset]
     mov [si+4], ax
-    mov [si+6], dx
-
+    mov ax, [dap_current_segment]
+    mov [si+6], ax
     mov eax, [dap_current_lba]
     mov [si+8], eax
     mov dword [si+12], 0
@@ -68,14 +65,23 @@ load_kernel:
     int 0x13
     jc kernel_load_error
     
-    movzx eax, word [dap+2]
+    mov ax, [dap+2]
     sub [dap_remaining_sectors], ax
-
+    
+    movzx eax, ax
     add [dap_current_lba], eax
-
+    
+    movzx eax, word [dap+2]
     shl eax, 9
-    add [dap_current_flat], eax
-
+    add [dap_current_offset], ax
+    jnc .no_segment_wrap
+    
+    mov ax, [dap_current_segment]
+    add ax, 0x1000
+    mov [dap_current_segment], ax
+    mov word [dap_current_offset], 0
+    
+.no_segment_wrap:
     inc word [load_counter]
     jmp .load_loop
     
@@ -181,7 +187,8 @@ dap:
 
 dap_remaining_sectors: dw 0
 dap_current_lba: dd 0
-dap_current_flat: dd 0
+dap_current_segment: dw 0
+dap_current_offset: dw 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
 loading_kernel_msg: db 'From Alx0rr and Forker-25 to humans', 0
