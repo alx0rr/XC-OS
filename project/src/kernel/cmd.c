@@ -10,7 +10,6 @@
 #include "../include/cpu/cpu.h"
 #include "../include/graphics/vbe.h"
 #include "../include/graphics/framebuffer.h"
-#include "../include/scheduler/scheduler.h"
 #include "../include/timer/pit.h"
 #include "../include/sound/pcspk.h"
 #include "../lib/string.h"
@@ -451,10 +450,8 @@ static void demo_task_1(void) {
     uint32_t counter = 0;
     while (1) {
         printf("{FG(255,100,100)}[Task 1] Counter: %u\n", counter++);
-        task_sleep(1000);
         if (counter >= 5) {
             printf("{FG(255,100,100)}[Task 1] Exiting after 5 iterations\n");
-            task_exit();
         }
     }
 }
@@ -463,10 +460,8 @@ static void demo_task_2(void) {
     uint32_t counter = 0;
     while (1) {
         printf("{FG(100,255,100)}[Task 2] Counter: %u\n", counter++);
-        task_sleep(1500);
         if (counter >= 5) {
             printf("{FG(100,255,100)}[Task 2] Exiting after 5 iterations\n");
-            task_exit();
         }
     }
 }
@@ -475,10 +470,8 @@ static void demo_task_3(void) {
     uint32_t counter = 0;
     while (1) {
         printf("{FG(100,100,255)}[Task 3] Counter: %u\n", counter++);
-        task_sleep(2000);
         if (counter >= 5) {
             printf("{FG(100,100,255)}[Task 3] Exiting after 5 iterations\n");
-            task_exit();
         }
     }
 }
@@ -487,12 +480,8 @@ void cmd_taskdemo(void) {
     printf("{FG(255,255,0)}=== Multitasking Demo ===\n\n");
     printf("{FG(0,255,255)}Creating tasks...\n");
 
-    task_create("Demo Task 1", demo_task_1, 0);
-    task_create("Demo Task 2", demo_task_2, 0);
-    task_create("Demo Task 3", demo_task_3, 0);
 
     printf("{FG(0,255,0)}Tasks created! Starting scheduler...\n\n");
-    scheduler_start();
 
     printf("{FG(255,255,0)}Scheduler is now running!\n");
     printf("{FG(0,255,255)}Watch the tasks execute in parallel...\n\n");
@@ -815,8 +804,7 @@ void cmd(){
         else if (strcmp(cmd, "vmmtest")  == 0)  cmd_vmmtest();
         else if (strcmp(cmd, "bench")    == 0)  cmd_bench();
         else if (strcmp(cmd, "pitbench") == 0)  cmd_pitbench();
-        else if (strcmp(cmd, "ps")       == 0)  scheduler_print_tasks();
-        else if (strcmp(cmd, "taskdemo") == 0)  cmd_taskdemo();
+        
         else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
         else if (strcmp(cmd, "beep")     == 0)  cmd_beep(argc, args);
         else if (strcmp(cmd, "hb")       == 0)  cmd_hb();
@@ -830,6 +818,5 @@ void cmd(){
         }
 
         free_args(args, argc);
-        task_yield();
     }
 }

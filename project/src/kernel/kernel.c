@@ -1,5 +1,4 @@
 #include "../include/text.h"
-#include "../include/scheduler/scheduler.h"
 #include "startup.c"
 #include "cmd.c"
 

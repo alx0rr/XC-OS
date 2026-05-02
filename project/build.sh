@@ -62,7 +62,6 @@ cc "$DRIVERS/storage/ata.c"           "$BUILD/ata.o"
 cc "$DRIVERS/timer/pit.c"             "$BUILD/pit.o"
 cc "$DRIVERS/sound/pcspk.c"           "$BUILD/pcspk.o"
 cc "$DRIVERS/fs/xcfs.c"               "$BUILD/xcfs.o"
-cc "$DRIVERS/scheduler/scheduler.c"   "$BUILD/scheduler.o"
 
 step "Compiling IDT..."
 cc "$KERNEL/interrupts/idt.c"  "$BUILD/idt.o"
@@ -77,7 +76,7 @@ ld -m elf_i386 -T "$SRC/linker.ld" -o "$BUILD/kernel.bin" \
     "$BUILD/pmm.o"        "$BUILD/vmm.o"        \
     "$BUILD/string.o"     "$BUILD/time.o"       "$BUILD/random.o"   \
     "$BUILD/keyboard.o"   "$BUILD/cpu.o"        "$BUILD/ata.o"       \
-    "$BUILD/xcfs.o"       "$BUILD/scheduler.o"  "$BUILD/pit.o"       "$BUILD/pcspk.o" \
+    "$BUILD/xcfs.o"       "$BUILD/pit.o"        "$BUILD/pcspk.o" \
     || die "Linking failed"
 
 step "Padding binaries..."

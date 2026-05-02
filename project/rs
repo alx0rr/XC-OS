@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+SRC="${1:-src}"
+
+STARTUP="$SRC/kernel/startup.c"
+KERNEL="$SRC/kernel/kernel.c"
+CMD="$SRC/kernel/cmd.c"
+PIT="$SRC/drivers/timer/pit.c"
+
+sed -i '/#include.*scheduler\/scheduler\.h/d' "$STARTUP"
+sed -i '/scheduler_init();/d' "$STARTUP"
+sed -i '/\[OK\].*Task Scheduler initialized/d' "$STARTUP"
+
+sed -i '/#include.*scheduler\/scheduler\.h/d' "$KERNEL"
+
+sed -i '/#include.*scheduler\/scheduler\.h/d' "$CMD"
+sed -i '/task_sleep([^)]*);/d' "$CMD"
+sed -i '/task_exit();/d' "$CMD"
+sed -i '/task_create(/d' "$CMD"
+sed -i '/scheduler_start();/d' "$CMD"
+sed -i '/scheduler_print_tasks();/d' "$CMD"
+sed -i '/task_yield();/d' "$CMD"
+sed -i 's/else if (strcmp(cmd, "ps").*scheduler_print_tasks();//' "$CMD"
+sed -i 's/else if (strcmp(cmd, "taskdemo").*cmd_taskdemo();//' "$CMD"
+
+sed -i '/#include.*scheduler\/scheduler\.h/d' "$PIT"
+sed -i '/scheduler_tick(regs);/d' "$PIT"
+
+echo "Done. Scheduler removed from: $STARTUP $KERNEL $CMD $PIT"
+
