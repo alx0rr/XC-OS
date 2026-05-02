@@ -55,7 +55,7 @@ void vmm_init() {
     cr4 |= 0x10;
     __asm__ volatile("mov %0, %%cr4" : : "r"(cr4));
 
-    uint32_t identity_end = 0x10000000;
+    uint32_t identity_end = 0xE0000000;
     for (uint32_t addr = 0; addr < identity_end; addr += 0x400000) {
         uint32_t pd_index = addr >> 22;
         kernel_directory->entries[pd_index] = addr | PAGE_PRESENT | PAGE_WRITE | 0x80;

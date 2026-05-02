@@ -180,8 +180,7 @@ static void bsod(registers_t *regs) {
     xpos = 10;
     ypos = 10;
 
-    printf("OH FUCK!\n");
-
+    printf("Fuck the x86!");
     const char *name = (regs->int_no < 32) ? exc_names[regs->int_no] : "Unknown";
     printf("Exception #%u: %s\n", regs->int_no, name);
     printf("Error Code: 0x%x\n\n", regs->err_code);

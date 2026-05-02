@@ -734,12 +734,7 @@ void cmd_help(void) {
 
 //BEGIN OF CMD CYCLE
 
-static void free_args(char* args[], int argc) {
-    for (int i = 0; i < argc; i++) {
-        if (args[i]) pmm_free(args[i]);
-    }
-}
-
+static void free_args(char* args[], int argc);
 static void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
     *argc = 0;
@@ -769,6 +764,11 @@ static void parse_command(char* input, char* cmd, char* args[], int* argc) {
     }
 }
 
+static void free_args(char* args[], int argc) {
+    for (int i = 0; i < argc; i++) {
+        if (args[i]) pmm_free(args[i]);
+    }
+}
 
 
 void cmd(){
