@@ -174,12 +174,13 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args) {
             else break;
         } else {
             p++;
-            switch (*p++) {
+            char sp = *p++;
+            switch (sp) {
             case 'd':
             case 'x':
             case 'u':{
                 int value = va_arg(args, int);
-                itoa(buf, *p, value);
+                itoa(buf, sp, value);
                 const char *tmp = buf;
                 while (*tmp && out < end) *out++ = *tmp++;
                 break;
@@ -192,7 +193,7 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args) {
             }
             default:
                 if (out < end) *out++ = '%';
-                if (out < end) *out++ = *(p - 1);
+                if (out < end) *out++ = sp;
                 break;
             }
         }

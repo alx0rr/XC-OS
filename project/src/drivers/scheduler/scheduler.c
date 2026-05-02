@@ -195,6 +195,17 @@ void task_exit(void) {
         current_task->stack = 0;
     }
     
+    task_t *dead = current_task;
+    if(task_list_head == dead) {
+        task_list_head = dead->next;
+    } else {
+        task_t *p = task_list_head;
+        while(p && p->next != dead) p = p->next;
+        if(p) p->next = dead->next;
+    }
+    pmm_free(dead);
+    current_task = 0;
+    
     task_yield();
     
     while(1) {

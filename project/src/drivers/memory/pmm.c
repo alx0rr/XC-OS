@@ -360,51 +360,44 @@ void pmm_print_stats() {
 }
 void pmm_defragment() {
     for (uint32_t order = 0; order < MAX_ORDER - 1; order++) {
-        spin_lock(&list_locks[order]);
-        free_block_t* current = free_lists[order];
-        while (current) {
-            uint32_t block_num = addr_to_block(current);
-            uint32_t buddy_num = get_buddy(block_num, order);
-            if (buddy_num == 0xFFFFFFFF || buddy_num >= max_blocks) {
-                current = current->next;
-                continue;
-            }
-            if (!is_buddy_free(buddy_num, order)) {
-                current = current->next;
-                continue;
-            }
-            free_block_t* buddy = block_to_addr(buddy_num);
-            if (!buddy) {
-                current = current->next;
-                continue;
-            }
-            free_block_t** list = &free_lists[order];
-            free_block_t* prev_curr = 0;
-            while (*list && *list != current) {
-                prev_curr = *list;
-                list = &((*list)->next);
-            }
-            if (*list) {
-                if (prev_curr) prev_curr->next = current->next;
-                else free_lists[order] = current->next;
-            }
-            list = &free_lists[order];
-            free_block_t* prev_buddy = 0;
-            while (*list && *list != buddy) {
-                prev_buddy = *list;
-                list = &((*list)->next);
-            }
-            if (*list) {
-                if (prev_buddy) prev_buddy->next = buddy->next;
-                else free_lists[order] = buddy->next;
-            }
-            free_block_t* merged = (buddy_num < block_num) ? buddy : current;
-            spin_unlock(&list_locks[order]);
-            add_block_to_list(order + 1, merged);
+        int merged = 1;
+        while (merged) {
+            merged = 0;
             spin_lock(&list_locks[order]);
-            current = free_lists[order];
+            free_block_t* current = free_lists[order];
+            while (current) {
+                uint32_t block_num = addr_to_block(current);
+                uint32_t buddy_num = get_buddy(block_num, order);
+                if (buddy_num == 0xFFFFFFFF || buddy_num >= max_blocks) {
+                    current = current->next;
+                    continue;
+                }
+                if (!is_buddy_free(buddy_num, order)) {
+                    current = current->next;
+                    continue;
+                }
+                free_block_t* buddy = block_to_addr(buddy_num);
+                if (!buddy) {
+                    current = current->next;
+                    continue;
+                }
+                free_block_t** lc = &free_lists[order];
+                free_block_t* pc = 0;
+                while (*lc && *lc != current) { pc = *lc; lc = &((*lc)->next); }
+                if (*lc) { if (pc) pc->next = current->next; else free_lists[order] = current->next; }
+                free_block_t** lb = &free_lists[order];
+                free_block_t* pb = 0;
+                while (*lb && *lb != buddy) { pb = *lb; lb = &((*lb)->next); }
+                if (*lb) { if (pb) pb->next = buddy->next; else free_lists[order] = buddy->next; }
+                free_block_t* merged_blk = (buddy_num < block_num) ? buddy : current;
+                spin_unlock(&list_locks[order]);
+                add_block_to_list(order + 1, merged_blk);
+                merged = 1;
+                goto next_pass;
+            }
+            spin_unlock(&list_locks[order]);
+            next_pass:;
         }
-        spin_unlock(&list_locks[order]);
     }
 }
 uint32_t pmm_get_total_memory() {

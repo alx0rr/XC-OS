@@ -7,6 +7,16 @@
 static ata_device_t ata_devices[4];
 static volatile uint8_t ata_irq_invoked = 0;
 static volatile uint8_t ata_irq_error = 0;
+static volatile uint32_t ata_lock = 0;
+
+static inline void ata_spin_lock(void) {
+    while (__sync_lock_test_and_set(&ata_lock, 1)) {
+        while (ata_lock) __asm__ volatile("pause");
+    }
+}
+static inline void ata_spin_unlock(void) {
+    __sync_lock_release(&ata_lock);
+}
 
 static void ata_irq_handler_primary(registers_t* regs) {
     (void)regs;
@@ -177,7 +187,8 @@ int ata_read_sector(uint8_t drive, uint32_t lba, uint8_t* buffer) {
     ata_device_t* dev = &ata_devices[drive];
     if(lba >= dev->max_lba) return -1;
     
-    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) return -1;
+    ata_spin_lock();
+    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) { ata_spin_unlock(); return -1; }
     
     if(dev->lba48_support && lba > 0x0FFFFFFF) {
         ata_set_lba48(dev, lba, 1);
@@ -191,14 +202,15 @@ int ata_read_sector(uint8_t drive, uint32_t lba, uint8_t* buffer) {
         outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
     }
     
-    if(ata_wait_irq(10000) < 0) return -1;
-    if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) return -1;
+    if(ata_wait_irq(10000) < 0) { ata_spin_unlock(); return -1; }
+    if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) { ata_spin_unlock(); return -1; }
     
     uint16_t* buf16 = (uint16_t*)buffer;
     for(int i = 0; i < 256; i++)
         buf16[i] = inw(dev->io_base + ATA_REG_DATA);
     
     ata_wait(dev->io_base, ATA_SR_BSY, 0, 100000);
+    ata_spin_unlock();
     return 0;
 }
 
@@ -209,7 +221,8 @@ int ata_write_sector(uint8_t drive, uint32_t lba, uint8_t* buffer) {
     ata_device_t* dev = &ata_devices[drive];
     if(lba >= dev->max_lba) return -1;
     
-    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) return -1;
+    ata_spin_lock();
+    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) { ata_spin_unlock(); return -1; }
     
     if(dev->lba48_support && lba > 0x0FFFFFFF) {
         ata_set_lba48(dev, lba, 1);
@@ -223,18 +236,19 @@ int ata_write_sector(uint8_t drive, uint32_t lba, uint8_t* buffer) {
         outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
     }
     
-    if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) return -1;
+    if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) { ata_spin_unlock(); return -1; }
     
     uint16_t* buf16 = (uint16_t*)buffer;
     for(int i = 0; i < 256; i++)
         outw(dev->io_base + ATA_REG_DATA, buf16[i]);
     
-    if(ata_wait_irq(10000) < 0) return -1;
+    if(ata_wait_irq(10000) < 0) { ata_spin_unlock(); return -1; }
     
     outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_FLUSH_CACHE);
-    if(ata_wait_irq(10000) < 0) return -1;
+    if(ata_wait_irq(10000) < 0) { ata_spin_unlock(); return -1; }
     
     ata_wait(dev->io_base, ATA_SR_BSY, 0, 100000);
+    ata_spin_unlock();
     return 0;
 }
 
@@ -245,7 +259,8 @@ int ata_read_sectors(uint8_t drive, uint32_t lba, uint8_t* buffer, uint8_t count
     ata_device_t* dev = &ata_devices[drive];
     if(lba + count > dev->max_lba) return -1;
     
-    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) return -1;
+    ata_spin_lock();
+    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) { ata_spin_unlock(); return -1; }
     
     if(dev->lba48_support && (lba > 0x0FFFFFFF || (lba + count) > 0x0FFFFFFF)) {
         ata_set_lba48(dev, lba, count);
@@ -260,8 +275,8 @@ int ata_read_sectors(uint8_t drive, uint32_t lba, uint8_t* buffer, uint8_t count
     }
     
     for(uint8_t sector = 0; sector < count; sector++) {
-        if(ata_wait_irq(10000) < 0) return -1;
-        if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) return -1;
+        if(ata_wait_irq(10000) < 0) { ata_spin_unlock(); return -1; }
+        if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) { ata_spin_unlock(); return -1; }
         
         uint16_t* buf16 = (uint16_t*)(buffer + sector * 512);
         for(int i = 0; i < 256; i++)
@@ -269,6 +284,7 @@ int ata_read_sectors(uint8_t drive, uint32_t lba, uint8_t* buffer, uint8_t count
     }
     
     ata_wait(dev->io_base, ATA_SR_BSY, 0, 100000);
+    ata_spin_unlock();
     return 0;
 }
 
@@ -279,7 +295,8 @@ int ata_write_sectors(uint8_t drive, uint32_t lba, uint8_t* buffer, uint8_t coun
     ata_device_t* dev = &ata_devices[drive];
     if(lba + count > dev->max_lba) return -1;
     
-    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) return -1;
+    ata_spin_lock();
+    if(ata_wait(dev->io_base, ATA_SR_BSY, 0, 1000000) < 0) { ata_spin_unlock(); return -1; }
     
     if(dev->lba48_support && (lba > 0x0FFFFFFF || (lba + count) > 0x0FFFFFFF)) {
         ata_set_lba48(dev, lba, count);
@@ -294,18 +311,19 @@ int ata_write_sectors(uint8_t drive, uint32_t lba, uint8_t* buffer, uint8_t coun
     }
     
     for(uint8_t sector = 0; sector < count; sector++) {
-        if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) return -1;
+        if(ata_wait(dev->io_base, ATA_SR_DRQ, ATA_SR_DRQ, 1000000) < 0) { ata_spin_unlock(); return -1; }
         
         uint16_t* buf16 = (uint16_t*)(buffer + sector * 512);
         for(int i = 0; i < 256; i++)
             outw(dev->io_base + ATA_REG_DATA, buf16[i]);
         
-        if(ata_wait_irq(10000) < 0) return -1;
+        if(ata_wait_irq(10000) < 0) { ata_spin_unlock(); return -1; }
     }
     
     outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_FLUSH_CACHE);
-    if(ata_wait_irq(10000) < 0) return -1;
+    if(ata_wait_irq(10000) < 0) { ata_spin_unlock(); return -1; }
     
     ata_wait(dev->io_base, ATA_SR_BSY, 0, 100000);
+    ata_spin_unlock();
     return 0;
 }

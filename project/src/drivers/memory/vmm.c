@@ -165,6 +165,7 @@ void* vmm_alloc_pages(uint32_t count, uint32_t flags) {
     }
     return (void*)start_virt;
 }
+
 void vmm_free_pages(void* virt, uint32_t count) {
     if (!virt || count == 0) return;
     uint32_t virt_addr = (uint32_t)virt;

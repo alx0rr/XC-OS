@@ -97,9 +97,16 @@ void cmd_echo(int argc, char** argv) {
 
     if (filename) {
         char text[1024] = {0};
+        uint32_t tlen = 0;
         for (int i = 0; i < write_argc; i++) {
+            uint32_t alen = strlen(argv[i]);
+            if (tlen + alen + 2 >= sizeof(text)) {
+                printf("{FG(255,0,0)}echo: text too long\n");
+                return;
+            }
             strcat(text, argv[i]);
-            if (i < write_argc - 1) strcat(text, " ");
+            tlen += alen;
+            if (i < write_argc - 1) { strcat(text, " "); tlen++; }
         }
         xcfs_delete(filename);
         if (xcfs_create(filename, strlen(text)) == 0) {
@@ -727,6 +734,12 @@ void cmd_help(void) {
 
 //BEGIN OF CMD CYCLE
 
+static void free_args(char* args[], int argc) {
+    for (int i = 0; i < argc; i++) {
+        if (args[i]) pmm_free(args[i]);
+    }
+}
+
 static void parse_command(char* input, char* cmd, char* args[], int* argc) {
     int i = 0, j = 0;
     *argc = 0;
@@ -742,7 +755,11 @@ static void parse_command(char* input, char* cmd, char* args[], int* argc) {
         if (!input[i]) break;
 
         args[*argc] = (char*)pmm_malloc(128);
-        if (!args[*argc]) break;
+        if (!args[*argc]) {
+            free_args(args, *argc);
+            *argc = 0;
+            break;
+        }
 
         j = 0;
         while (input[i] && input[i] != ' ' && j < 127)
@@ -752,11 +769,6 @@ static void parse_command(char* input, char* cmd, char* args[], int* argc) {
     }
 }
 
-static void free_args(char* args[], int argc) {
-    for (int i = 0; i < argc; i++) {
-        if (args[i]) pmm_free(args[i]);
-    }
-}
 
 
 void cmd(){

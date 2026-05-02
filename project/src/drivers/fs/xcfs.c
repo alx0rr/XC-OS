@@ -297,6 +297,11 @@ int xcfs_delete(const char* path) {
     }
     memset(&xcfs_entries[xcfs_header.file_count - 1], 0, sizeof(xcfs_entry_t));
     xcfs_header.file_count--;
+    for (uint32_t i = 0; i < xcfs_header.file_count; i++) {
+        if (xcfs_entries[i].parent_idx > (uint32_t)idx) {
+            xcfs_entries[i].parent_idx--;
+        }
+    }
     save_header();
     uint32_t entries_per_sector = XCFS_SECTOR_SIZE / sizeof(xcfs_entry_t);
     uint32_t header_sectors = (xcfs_header.file_count + entries_per_sector - 1) / entries_per_sector;

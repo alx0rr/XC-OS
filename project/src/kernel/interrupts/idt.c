@@ -1,6 +1,8 @@
 #include "../../include/interrupts/idt.h"
 #include "../../lib/io.h"
 #include "../../include/text.h"
+#include "../../include/graphics/framebuffer.h"
+#include "../../lib/string.h"
 static idt_entry_t idt[IDT_ENTRIES];
 static idt_ptr_t idt_ptr;
 extern void isr0();
@@ -135,10 +137,80 @@ void idt_init() {
     asm volatile("lidt %0" : : "m"(idt_ptr));
     asm volatile("sti");
 }
+static const char* exc_names[32] = {
+    "Division By Zero",
+    "Debug",
+    "Non-Maskable Interrupt",
+    "Breakpoint",
+    "Overflow",
+    "Bound Range Exceeded",
+    "Invalid Opcode",
+    "Device Not Available",
+    "Double Fault",
+    "Coprocessor Segment Overrun",
+    "Invalid TSS",
+    "Segment Not Present",
+    "Stack-Segment Fault",
+    "General Protection Fault",
+    "Page Fault",
+    "Reserved",
+    "x87 Floating-Point",
+    "Alignment Check",
+    "Machine Check",
+    "SIMD Floating-Point",
+    "Virtualization",
+    "Control Protection",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Hypervisor Injection",
+    "VMM Communication",
+    "Security Exception",
+    "Reserved"
+};
+
+static void bsod(registers_t *regs) {
+    asm volatile("cli");
+    fb_fill(0xFF0000);
+    fg_color = 0xFFFFFF;
+    bg_color = 0xFF0000;
+    xpos = 10;
+    ypos = 10;
+
+    printf("OH FUCK!\n");
+
+    const char *name = (regs->int_no < 32) ? exc_names[regs->int_no] : "Unknown";
+    printf("Exception #%u: %s\n", regs->int_no, name);
+    printf("Error Code: 0x%x\n\n", regs->err_code);
+
+    printf("EIP: 0x%x    CS:  0x%x\n", regs->eip, regs->cs);
+    printf("EAX: 0x%x    EBX: 0x%x\n", regs->eax, regs->ebx);
+    printf("ECX: 0x%x    EDX: 0x%x\n", regs->ecx, regs->edx);
+    printf("ESI: 0x%x    EDI: 0x%x\n", regs->esi, regs->edi);
+    printf("EBP: 0x%x    ESP: 0x%x\n", regs->ebp, regs->esp);
+    printf("EFLAGS: 0x%x\n", regs->eflags);
+
+    if (regs->int_no == 14) {
+        uint32_t cr2;
+        asm volatile("mov %%cr2, %0" : "=r"(cr2));
+        printf("CR2 (fault addr): 0x%x\n", cr2);
+        printf("PF flags: %s %s %s\n",
+            (regs->err_code & 1) ? "PRESENT" : "NOT-PRESENT",
+            (regs->err_code & 2) ? "WRITE" : "READ",
+            (regs->err_code & 4) ? "USER" : "KERNEL");
+    }
+
+    printf("\nSystem halted. Please reboot.");
+    asm volatile("cli; hlt");
+    while(1) {}
+}
+
 void isr_handler(registers_t *regs) {
     if (regs->int_no < 32) {
-        printf("{FG(255,0,0)}Exception %u at EIP=0x%x\n", regs->int_no, regs->eip);
-        asm volatile("cli; hlt");
+        bsod(regs);
     } else if (regs->int_no >= 32 && regs->int_no < 48) {
         uint8_t irq_no = regs->int_no - 32;
         if (irq_handlers[irq_no]) {
