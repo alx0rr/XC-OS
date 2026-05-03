@@ -660,10 +660,9 @@ void cmd_hb(void) {
 }
 
 void cmd_rsof(void) {
-    volatile int x = 0;
-    volatile int y = 1 / x;
-    (void)y;
+    asm volatile("int $0x00");
 }
+//Fuck the x86 creator's!
 
 void poweroff() {
     outw(0x604, 0x2000);
