@@ -174,13 +174,29 @@ static const char* exc_names[32] = {
 
 static void bsod(registers_t *regs) {
     asm volatile("cli");
-    fb_fill(0xFF0000);
+
+    #define BI_PINK   0xD60270
+    #define BI_PURPLE 0x9B4F96
+    #define BI_BLUE   0x0038A8
+
+    uint16_t w = fb_get_width();
+    uint16_t h = fb_get_height();
+    uint16_t stripe1 = (h * 2) / 5;
+    uint16_t stripe2 = (h * 3) / 5;
+                                            
+    for (uint16_t y = 0; y < h; y++) {
+        uint32_t color = (y < stripe1) ? BI_PINK :
+                         (y < stripe2) ? BI_PURPLE : BI_BLUE;
+        for (uint16_t x = 0; x < w; x++)
+            fb_putpixel(x, y, color);
+    }
+
     fg_color = 0xFFFFFF;
-    bg_color = 0xFF0000;
+    bg_color = 0x000000;
     xpos = 10;
     ypos = 10;
 
-    printf("Fuck the x86!");
+    printf("Some bad happen\n");
     const char *name = (regs->int_no < 32) ? exc_names[regs->int_no] : "Unknown";
     printf("Exception #%u: %s\n", regs->int_no, name);
     printf("Error Code: 0x%x\n\n", regs->err_code);
