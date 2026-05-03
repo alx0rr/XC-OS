@@ -660,17 +660,9 @@ void cmd_hb(void) {
 }
 
 void cmd_rsof(void) {
-    asm volatile("cli");
-    fb_fill(0xFF0000);
-    fg_color = 0xFFFFFF;
-    bg_color = 0xFF0000;
-    xpos = 10;
-    ypos = 10;
-    printf("RED SCREEN OF FUCK\n\n");
-    printf("Something went so wrong that you actually typed this command.\n");
-    printf("Congratulations. Please reboot.\n");
-    asm volatile("hlt");
-    while(1) {}
+    volatile int x = 0;
+    volatile int y = 1 / x;
+    (void)y;
 }
 
 void poweroff() {
