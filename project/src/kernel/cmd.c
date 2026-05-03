@@ -659,8 +659,11 @@ void cmd_hb(void) {
     printf("{FG(0,255,0)}Done!\n");
 }
 
+
 void cmd_rsof(void) {
-    asm volatile("int $0x00");
+    volatile uint32_t *p = (volatile uint32_t *)0x00000000;
+    volatile uint32_t x = *p;
+    (void)x;
 }
 //Fuck the x86 creator's!
 
