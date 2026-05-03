@@ -659,6 +659,20 @@ void cmd_hb(void) {
     printf("{FG(0,255,0)}Done!\n");
 }
 
+void cmd_rsof(void) {
+    asm volatile("cli");
+    fb_fill(0xFF0000);
+    fg_color = 0xFFFFFF;
+    bg_color = 0xFF0000;
+    xpos = 10;
+    ypos = 10;
+    printf("RED SCREEN OF FUCK\n\n");
+    printf("Something went so wrong that you actually typed this command.\n");
+    printf("Congratulations. Please reboot.\n");
+    asm volatile("hlt");
+    while(1) {}
+}
+
 void poweroff() {
     outw(0x604, 0x2000);
     outw(0xB004, 0x2000);
@@ -706,6 +720,7 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}memtest{FG(255,255,255)}   - Memory stress test\n");
     printf("  {FG(255,255,0)}vmmtest{FG(255,255,255)}   - VMM test suite\n");
     printf("  {FG(255,255,0)}bench{FG(255,255,255)}     - System benchmark\n");
+    printf("  {FG(255,255,0)}rsof{FG(255,255,255)}      - Red Screen of Fuck\n");
     printf("  {FG(255,255,0)}pitbench{FG(255,255,255)}  - PIT accuracy test\n");
     printf("\n");
 
@@ -781,6 +796,7 @@ void cmd(){
         else if (strcmp(cmd, "cd")       == 0)  cmd_cd(argc, args);
         else if (strcmp(cmd, "pwd")      == 0)  cmd_pwd();
         else if (strcmp(cmd, "mkdir")    == 0)  cmd_mkdir(argc, args);
+        else if (strcmp(cmd, "rsof")     == 0)  cmd_rsof();
         else if (strcmp(cmd, "cat")      == 0)  cmd_cat(argc, args);
         else if (strcmp(cmd, "echo")     == 0)  cmd_echo(argc, args);
         else if (strcmp(cmd, "touch")    == 0)  cmd_touch(argc, args);
