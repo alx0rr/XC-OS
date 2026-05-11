@@ -9,97 +9,147 @@ stage2_start:
     mov ah, 0x00
     mov al, 0x03
     int 0x10
-    
-    mov si, stage2_msg
-    call prnt
-    
-    jmp load_kernel
 
-load_kernel:
-    mov si, loading_kernel_msg
+    mov si, msg_s2start
     call prnt
-    
+
     mov ah, 0x41
     mov bx, 0x55AA
     mov dl, [boot_drive]
     int 0x13
-    jc .no_lba_support
-    
+    jc .no_lba
+
+    mov si, msg_lba_ok
+    call prnt
+    jmp .do_load
+
+.no_lba:
+    mov si, msg_no_lba
+    call prnt
+    jmp halt_system
+
+.do_load:
     mov word [dap_remaining_sectors], KERNEL_SECTORS
     mov dword [dap_current_lba], 32
     mov dword [linear_addr], 0x10000
-    
+
+    mov si, msg_loading
+    call prnt
+
 .load_loop:
     mov cx, [dap_remaining_sectors]
     cmp cx, 0
-    je .load_success
-    
-    mov si, dot_msg
-    call prnt
-    
+    je .load_done
+
     cmp cx, 127
-    jbe .load_last_chunk
+    jbe .last_chunk
     mov word [dap+2], 127
-    jmp .do_load
-    
-.load_last_chunk:
+    jmp .do_int13
+
+.last_chunk:
     mov [dap+2], cx
-    
-.do_load:
+
+.do_int13:
     mov eax, [linear_addr]
     mov ebx, eax
     shr ebx, 4
     mov [dap+6], bx
-
     and ax, 0x000F
     mov [dap+4], ax
-    
+
     mov byte [dap], 0x10
     mov byte [dap+1], 0
     mov eax, [dap_current_lba]
     mov [dap+8], eax
     mov dword [dap+12], 0
-    
+
     mov ah, 0x42
     mov dl, [boot_drive]
     mov si, dap
     int 0x13
-    jc kernel_load_error
-    
+    jc .disk_error
+
     movzx eax, word [dap+2]
     sub [dap_remaining_sectors], ax
-    
     add [dap_current_lba], eax
-    
     shl eax, 9
     add [linear_addr], eax
-    
+
+    mov si, msg_dot
+    call prnt
     jmp .load_loop
-    
-.no_lba_support:
-    mov si, no_lba_msg
+
+.disk_error:
+    mov si, msg_disk_err
+    call prnt
+    mov si, msg_ah
+    call prnt
+    mov al, ah
+    call print_hex_byte
+    mov si, msg_nl
     call prnt
     jmp halt_system
-    
-.load_success:
-    mov si, newline_msg
+
+.load_done:
+    mov si, msg_nl
     call prnt
-    mov si, kernel_loaded_msg
+    mov si, msg_loaded
     call prnt
-    
-    mov si, vbe_init_msg
+
+    mov si, msg_vbe
     call prnt
     mov cx, 0x4118
     call init_vbe_mode
+    push ax
+    mov si, msg_vbe_ret
+    call prnt
+    pop ax
+    push ax
+    call print_hex_word
+    mov si, msg_nl
+    call prnt
+    pop ax
     cmp ax, 0x004F
-    jne kernel_load_error
-    
-    mov si, mmap_init_msg
+    jne .vbe_fail
+
+    mov si, msg_vbe_ok
+    call prnt
+    jmp .do_mmap
+
+.vbe_fail:
+    mov si, msg_vbe_fail
+    call prnt
+    jmp halt_system
+
+.do_mmap:
+    mov si, msg_mmap
     call prnt
     call get_memory_map
+    push eax
+    mov si, msg_mmap_ret
+    call prnt
+    pop eax
+    push eax
+    movzx eax, ax
+    call print_hex_word
+    mov si, msg_nl
+    call prnt
+    pop eax
     cmp eax, 0
-    je kernel_load_error
-    
+    je .mmap_fail
+
+    mov si, msg_mmap_ok
+    call prnt
+    jmp .go_pm
+
+.mmap_fail:
+    mov si, msg_mmap_fail
+    call prnt
+    jmp halt_system
+
+.go_pm:
+    mov si, msg_pm
+    call prnt
     cli
     lgdt [gdt_descriptor]
     mov eax, cr0
@@ -107,10 +157,34 @@ load_kernel:
     mov cr0, eax
     jmp 0x08:protected_mode_start
 
-kernel_load_error:
-    mov si, kernel_error_msg
-    call prnt
-    jmp halt_system
+print_hex_byte:
+    push ax
+    shr al, 4
+    call .nibble
+    pop ax
+    and al, 0x0F
+    call .nibble
+    ret
+.nibble:
+    cmp al, 9
+    jbe .digit
+    add al, 'A' - 10
+    jmp .out
+.digit:
+    add al, '0'
+.out:
+    mov ah, 0x0E
+    mov bh, 0
+    int 0x10
+    ret
+
+print_hex_word:
+    push ax
+    mov al, ah
+    call print_hex_byte
+    pop ax
+    call print_hex_byte
+    ret
 
 [bits 32]
 protected_mode_start:
@@ -121,27 +195,29 @@ protected_mode_start:
     mov gs, ax
     mov ss, ax
     mov esp, 0x90000
-    
+
     mov esi, 0x10000
     mov edi, 0x100000
     mov ecx, KERNEL_SIZE
     rep movsb
-    
+
     jmp 0x08:0x100000
 
 [bits 16]
 prnt:
     lodsb
     test al, al
-    jz print_done
+    jz .done
     mov ah, 0x0E
     mov bh, 0
     int 0x10
     jmp prnt
-print_done:
+.done:
     ret
 
 halt_system:
+    mov si, msg_halt
+    call prnt
     cli
     hlt
     jmp halt_system
@@ -169,25 +245,35 @@ gdt_descriptor:
     dw gdt_end - gdt_start - 1
     dd gdt_start
 
-boot_drive: db 0x80
+boot_drive:  db 0x80
 
 align 4
 dap:
     times 16 db 0
 
 dap_remaining_sectors: dw 0
-dap_current_lba: dd 0
-linear_addr: dd 0
+dap_current_lba:       dd 0
+linear_addr:           dd 0
 
-stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'Like A Rolling Stone!', 0
-dot_msg: db '.', 0
-newline_msg: db 13, 10, 0
-kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
-no_lba_msg: db 'LBA not supported!', 13, 10, 0
-vbe_init_msg: db 'Setting VBE mode...', 13, 10, 0
-mmap_init_msg: db 'Getting memory map...', 13, 10, 0
-kernel_error_msg: db 13, 10, 'Fatal: Failed to load kernel!', 13, 10, 'System halted.', 13, 10, 0
+msg_s2start:   db 'Stage2 OK', 13, 10, 0
+msg_lba_ok:    db 'LBA OK', 13, 10, 0
+msg_no_lba:    db 'NO LBA!', 13, 10, 0
+msg_loading:   db 'Loading', 0
+msg_dot:       db '.', 0
+msg_loaded:    db 'Kernel loaded', 13, 10, 0
+msg_disk_err:  db 13, 10, 'DISK ERR AH=0x', 0
+msg_ah:        db 0
+msg_vbe:       db 'VBE init...', 13, 10, 0
+msg_vbe_ret:   db 'VBE ret=0x', 0
+msg_vbe_ok:    db 'VBE OK', 13, 10, 0
+msg_vbe_fail:  db 'VBE FAIL!', 13, 10, 0
+msg_mmap:      db 'MMAP...', 13, 10, 0
+msg_mmap_ret:  db 'MMAP entries=0x', 0
+msg_mmap_ok:   db 'MMAP OK', 13, 10, 0
+msg_mmap_fail: db 'MMAP FAIL!', 13, 10, 0
+msg_pm:        db 'Entering PM...', 13, 10, 0
+msg_halt:      db 13, 10, '*** HALTED ***', 13, 10, 0
+msg_nl:        db 13, 10, 0
 
 %include "src/boot/utils/vbe.asm"
 %include "src/boot/utils/mmap.asm"
