@@ -1,4 +1,5 @@
 VBE_INFO_ADDR equ 0x5000
+
 init_vbe_mode:
     push es
     push di
@@ -12,10 +13,9 @@ init_vbe_mode:
     cmp ax, 0x004F
     jne .vbe_error
 
-    pop cx
-    mov ax, 0x4F02
-    mov bx, cx
+    pop bx
     or bx, 0x4000
+    mov ax, 0x4F02
     int 0x10
     cmp ax, 0x004F
     jne .vbe_error_nostack
@@ -29,4 +29,5 @@ init_vbe_mode:
 .vbe_error_nostack:
     pop di
     pop es
+    xor ax, ax
     ret

@@ -49,12 +49,10 @@ load_kernel:
     mov eax, [linear_addr]
     mov ebx, eax
     shr ebx, 4
-    and bx, 0xF000
     mov [dap+6], bx
-    
-    mov ebx, eax
-    and bx, 0x000F
-    mov [dap+4], bx
+
+    and ax, 0x000F
+    mov [dap+4], ax
     
     mov byte [dap], 0x10
     mov byte [dap+1], 0
@@ -183,7 +181,7 @@ linear_addr: dd 0
 
 stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
 loading_kernel_msg: db 'Like A Rolling Stone!', 0
-dot_msg: db ' Like A Rolling Stone!', 0
+dot_msg: db '.', 0
 newline_msg: db 13, 10, 0
 kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
 no_lba_msg: db 'LBA not supported!', 13, 10, 0
