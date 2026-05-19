@@ -84,22 +84,23 @@ load_kernel:
     jc  .err
 
     movzx eax, word [dap+2]
+    mov [tmp], eax
 
     push ds
-    push eax
     xor ax, ax
     mov ds, ax
 
     mov esi, 0x10000
     mov edi, [dst]
-    mov ecx, 0
-    mov cx,  [dap+2]
+    mov ecx, [tmp]
     shl ecx, 9
+    mov [csz], ecx
     a32 rep movsb
 
-    pop eax
     pop ds
 
+    mov eax, [tmp]
+    mov ecx, [csz]
     add dword [dst], ecx
     sub [rem], ax
     add [lba], eax
@@ -139,6 +140,9 @@ init_vbe:
 init_mmap:
     mov si, mmapmsg
     call prnt
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
     call get_memory_map
     cmp eax, 0
     je  halt
@@ -222,6 +226,8 @@ dap:        times 16 db 0
 rem:        dw 0
 lba:        dd 0
 dst:        dd 0
+tmp:        dd 0
+csz:        dd 0
 
 s2msg:    db 'XC Bootloader Stage 2...', 13, 10, 0
 lkmsg:    db 'Loading kernel...', 0
