@@ -1,128 +1,161 @@
 [bits 16]
 [org 0x7e00]
 
-KERNEL_SECTORS equ 2017
-KERNEL_SIZE    equ KERNEL_SECTORS * 512
+%include "src/boot/config.inc"
 
 stage2_start:
     mov [boot_drive], dl
     mov ah, 0x00
     mov al, 0x03
     int 0x10
-    
-    mov si, stage2_msg
+
+    mov si, s2msg
     call prnt
-    
+
+    call enter_unreal
+
     jmp load_kernel
 
+enter_unreal:
+    push eax
+    push ds
+
+    lgdt [ugdt_desc]
+
+    mov eax, cr0
+    or  eax, 1
+    mov cr0, eax
+
+    mov ax, 0x08
+    mov ds, ax
+
+    and eax, ~1
+    mov cr0, eax
+
+    jmp 0x0000:.back
+.back:
+    xor ax, ax
+    mov ds, ax
+    pop ds
+    pop eax
+    ret
+
 load_kernel:
-    mov si, loading_kernel_msg
+    mov si, lkmsg
     call prnt
-    
+
     mov ah, 0x41
     mov bx, 0x55AA
     mov dl, [boot_drive]
     int 0x13
-    jc .no_lba_support
-    
-    mov word [load_counter], 0
-    mov cx, KERNEL_SECTORS
-    mov word [dap_remaining_sectors], cx
-    mov dword [dap_current_lba], 32
-    mov word [dap_current_segment], 0x1000
-    mov word [dap_current_offset], 0x0000
-    
-.load_loop:
-    mov cx, [dap_remaining_sectors]
+    jc  .no_lba
+
+    mov word  [rem],  CFG_KERNEL_MAX_SECTORS
+    mov dword [lba],  CFG_KERNEL_START_SECTOR
+    mov dword [dst],  0x100000
+
+.loop:
+    mov cx, [rem]
     cmp cx, 0
-    je .load_success
-    
-    mov si, dot_msg
+    je  .done
+
+    mov si, dotmsg
     call prnt
-    
+
     cmp cx, 127
-    jbe .load_last_chunk
-    mov word [dap+2], 127
-    jmp .do_load
-    
-.load_last_chunk:
+    jbe .last
+    mov cx, 127
+.last:
     mov [dap+2], cx
-    
-.do_load:
-    mov si, dap
-    mov byte [si], 0x10
-    mov byte [si+1], 0
-    mov ax, [dap_current_offset]
-    mov [si+4], ax
-    mov ax, [dap_current_segment]
-    mov [si+6], ax
-    mov eax, [dap_current_lba]
-    mov [si+8], eax
-    mov dword [si+12], 0
-    
+
+    mov byte  [dap],   0x10
+    mov byte  [dap+1], 0
+    mov word  [dap+4], 0x0000
+    mov word  [dap+6], 0x1000
+
+    mov eax, [lba]
+    mov [dap+8],  eax
+    mov dword [dap+12], 0
+
     mov ah, 0x42
     mov dl, [boot_drive]
+    mov si, dap
     int 0x13
-    jc kernel_load_error
-    
-    mov ax, [dap+2]
-    sub [dap_remaining_sectors], ax
-    
-    movzx eax, ax
-    add [dap_current_lba], eax
-    
+    jc  .err
+
     movzx eax, word [dap+2]
-    shl eax, 9
-    add [dap_current_offset], ax
-    jnc .no_segment_wrap
-    
-    mov ax, [dap_current_segment]
-    add ax, 0x1000
-    mov [dap_current_segment], ax
-    mov word [dap_current_offset], 0
-    
-.no_segment_wrap:
-    inc word [load_counter]
-    jmp .load_loop
-    
-.no_lba_support:
-    mov si, no_lba_msg
+    mov [tmp], eax
+
+    push ds
+    xor ax, ax
+    mov ds, ax
+
+    mov esi, 0x10000
+    mov edi, [dst]
+    mov ecx, [tmp]
+    shl ecx, 9
+    mov [csz], ecx
+    a32 rep movsb
+
+    pop ds
+
+    mov eax, [tmp]
+    mov ecx, [csz]
+    add dword [dst], ecx
+    sub [rem], ax
+    add [lba], eax
+
+    jmp .loop
+
+.done:
+    mov si, nlmsg
     call prnt
-    jmp halt_system
-    
-.load_success:
-    mov si, newline_msg
+    mov si, okmsg
     call prnt
-    mov si, kernel_loaded_msg
+    jmp init_vbe
+
+.no_lba:
+    mov si, nolbamsg
     call prnt
-    
-    mov si, vbe_init_msg
+    jmp halt
+
+.err:
+    mov si, errmsg
+    call prnt
+    jmp halt
+
+init_vbe:
+    mov si, vbemsg
     call prnt
     mov cx, 0x4118
     call init_vbe_mode
     cmp ax, 0x004F
-    jne kernel_load_error
-    
-    mov si, mmap_init_msg
+    jne .fail
+    jmp init_mmap
+.fail:
+    mov si, errmsg
     call prnt
+    jmp halt
+
+init_mmap:
+    mov si, mmapmsg
+    call prnt
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
     call get_memory_map
     cmp eax, 0
-    je kernel_load_error
-    
-    cli
-    lgdt [gdt_descriptor]
-    mov eax, cr0
-    or eax, 1
-    mov cr0, eax
-    jmp 0x08:protected_mode_start
+    je  halt
 
-kernel_load_error:
-    mov si, kernel_error_msg
-    call prnt
-    jmp halt_system
+    cli
+    lgdt [gdt_desc]
+    mov eax, cr0
+    or  eax, 1
+    mov cr0, eax
+    jmp 0x08:pm_start
 
 [bits 32]
-protected_mode_start:
+pm_start:
     mov ax, 0x10
     mov ds, ax
     mov es, ax
@@ -130,75 +163,81 @@ protected_mode_start:
     mov gs, ax
     mov ss, ax
     mov esp, 0x90000
-    
-    mov esi, 0x10000
-    mov edi, 0x100000
-    mov ecx, KERNEL_SIZE
-    rep movsb
-    
     jmp 0x08:0x100000
 
 [bits 16]
 prnt:
     lodsb
     test al, al
-    jz print_done
-    mov ah, 0x0E
-    mov bh, 0
-    int 0x10
-    jmp prnt
-print_done:
-    ret
+    jz   .d
+    mov  ah, 0x0E
+    mov  bh, 0
+    int  0x10
+    jmp  prnt
+.d: ret
 
-halt_system:
+halt:
     cli
     hlt
-    jmp halt_system
+    jmp halt
+
+align 8
+ugdt_start:
+    dq 0
+ugdt_flat:
+    dw 0xFFFF
+    dw 0x0000
+    db 0x00
+    db 10010010b
+    db 11001111b
+    db 0x00
+ugdt_end:
+ugdt_desc:
+    dw ugdt_end - ugdt_start - 1
+    dd ugdt_start
 
 align 8
 gdt_start:
-    dd 0x0
-    dd 0x0
+    dq 0
 gdt_code:
     dw 0xFFFF
-    dw 0x0
-    db 0x0
+    dw 0x0000
+    db 0x00
     db 10011010b
     db 11001111b
-    db 0x0
+    db 0x00
 gdt_data:
     dw 0xFFFF
-    dw 0x0
-    db 0x0
+    dw 0x0000
+    db 0x00
     db 10010010b
     db 11001111b
-    db 0x0
+    db 0x00
 gdt_end:
-gdt_descriptor:
+gdt_desc:
     dw gdt_end - gdt_start - 1
     dd gdt_start
 
 boot_drive: db 0x80
-load_counter: dw 0
 
 align 4
-dap:
-    times 16 db 0
+dap:        times 16 db 0
 
-dap_remaining_sectors: dw 0
-dap_current_lba: dd 0
-dap_current_segment: dw 0
-dap_current_offset: dw 0
+rem:        dw 0
+lba:        dd 0
+dst:        dd 0
+tmp:        dd 0
+csz:        dd 0
 
-stage2_msg: db 'XC Bootloader Stage 2...', 13, 10, 0
-loading_kernel_msg: db 'Like A Rolling Stone!', 0
-dot_msg: db ' Like A Rolling Stone!', 0
-newline_msg: db 13, 10, 0
-kernel_loaded_msg: db 'Kernel loaded!', 13, 10, 0
-no_lba_msg: db 'LBA not supported!', 13, 10, 0
-vbe_init_msg: db 'Setting VBE mode...', 13, 10, 0
-mmap_init_msg: db 'Getting memory map...', 13, 10, 0
-kernel_error_msg: db 13, 10, 'Fatal: Failed to load kernel!', 13, 10, 'System halted.', 13, 10, 0
+s2msg:    db 'XC Bootloader Stage 2...', 13, 10, 0
+lkmsg:    db 'Loading kernel...', 0
+dotmsg:   db '.', 0
+nlmsg:    db 13, 10, 0
+okmsg:    db 'Kernel loaded!', 13, 10, 0
+nolbamsg: db 'No LBA support!', 13, 10, 0
+errmsg:   db 13, 10, 'Fatal error. Halted.', 13, 10, 0
+vbemsg:   db 'Setting VBE...', 13, 10, 0
+mmapmsg:  db 'Getting memory map...', 13, 10, 0
 
 %include "src/boot/utils/vbe.asm"
 %include "src/boot/utils/mmap.asm"
