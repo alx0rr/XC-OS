@@ -6,6 +6,7 @@
 #include "../../include/net/tcp.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
+#include "../../include/text.h"
 
 static u16 ip_id = 0;
 
@@ -51,7 +52,13 @@ int ip_send(u32 dst, u8 proto, const void *data, u16 len) {
     h->chk      = ip_checksum(h, sizeof(ip_hdr_t));
 
     memcpy(buf + sizeof(ip_hdr_t), data, len);
-    return eth_send(dst_mac, ETH_TYPE_IP, buf, tot);
+    int r = eth_send(dst_mac, ETH_TYPE_IP, buf, tot);
+    printf("[IP] send proto=%d dst=%u.%u.%u.%u next=%u.%u.%u.%u ret=%d\n",
+        (int)proto,
+        (dst>>24)&0xFF,(dst>>16)&0xFF,(dst>>8)&0xFF,dst&0xFF,
+        (next_hop>>24)&0xFF,(next_hop>>16)&0xFF,(next_hop>>8)&0xFF,next_hop&0xFF,
+        r);
+    return r;
 }
 
 void ip_recv(const u8 *data, u16 len) {

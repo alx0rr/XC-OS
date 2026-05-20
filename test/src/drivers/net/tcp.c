@@ -128,7 +128,10 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
     conn->state       = TCP_SYN_SENT;
     active_conn       = conn;
 
-    tcp_send_raw(conn, TCP_FLAG_SYN, 0, 0);
+    int syn_ret = tcp_send_raw(conn, TCP_FLAG_SYN, 0, 0);
+    printf("[TCP] SYN sent to %u.%u.%u.%u:%u ret=%d\n",
+        (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,ip&0xFF,
+        (u32)port, syn_ret);
 
     deadline = (u32)pit_get_ticks() + 5000;
     while ((u32)pit_get_ticks() < deadline) {
@@ -136,6 +139,7 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
         if (conn->state == TCP_ESTABLISHED) return 0;
     }
 
+    printf("[TCP] connect timeout, state=%d\n", (int)conn->state);
     conn->state = TCP_CLOSED;
     active_conn = 0;
     return -1;
