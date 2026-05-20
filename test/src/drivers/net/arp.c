@@ -1,5 +1,6 @@
 #include "../../include/net/arp.h"
 #include "../../include/net/eth.h"
+#include "../../include/net/ne2000.h"
 #include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"

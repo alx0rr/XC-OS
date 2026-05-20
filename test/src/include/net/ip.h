@@ -19,7 +19,6 @@ typedef struct {
 #define IP_PROTO_ICMP 1
 #define IP_PROTO_TCP  6
 #define IP_PROTO_UDP  17
-#define IP_PROTO_UDP  17
 
 void ip_recv(const u8 *data, u16 len);
 int  ip_send(u32 dst, u8 proto, const void *data, u16 len);

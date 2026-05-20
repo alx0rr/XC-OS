@@ -134,7 +134,7 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
 
 int tcp_send(tcp_conn_t *conn, const void *data, u16 len) {
     if (conn->state != TCP_ESTABLISHED) return -1;
-    if (tcp_send_raw(conn, TCP_FLAG_ACK, data, len) < 0) return -1;
+    if (tcp_send_raw(conn, TCP_FLAG_ACK | TCP_FLAG_PSH, data, len) < 0) return -1;
     conn->seq += len;
     return 0;
 }
