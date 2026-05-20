@@ -61,7 +61,7 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     doff = (h->data_off >> 4) * 4;
     if (doff > len) return;
 
-    if (ntohl(h->src_port) != active_conn->remote_port ||
+    if (ntohs(h->src_port) != active_conn->remote_port ||
         src_ip              != active_conn->remote_ip) return;
 
     flags       = h->flags;
