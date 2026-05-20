@@ -61,7 +61,7 @@ case "$cmd" in
     if [ "$is_rel" -eq 1 ]; then
       echo "Starting release process..."
       
-      img="$R_DIR/project/bld/xcos.img"
+      img="$R_DIR/bld/xcos.img"
       if [ ! -f "$img" ]; then
         echo "Error: $img not found!" >&2
         exit 5
