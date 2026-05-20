@@ -45,7 +45,7 @@ static int tcp_send_raw(tcp_conn_t *conn, u8 flags, const void *data, u16 len) {
 
     if (len) memcpy(buf + sizeof(tcp_hdr_t), data, len);
 
-    h->chk = tcp_checksum(arp_get_ip(), conn->remote_ip, buf, total);
+    h->chk = tcp_checksum(htonl(arp_get_ip()), htonl(conn->remote_ip), buf, total);
 
     return ip_send(conn->remote_ip, IP_PROTO_TCP, buf, total);
 }
