@@ -37,18 +37,7 @@ int ip_send(u32 dst, u8 proto, const void *data, u16 len) {
     else
         next_hop = gateway;
 
-    printf("[IP] send: dst=%u.%u.%u.%u next_hop=%u.%u.%u.%u proto=%u\n",
-        (dst>>24)&0xFF,(dst>>16)&0xFF,(dst>>8)&0xFF,dst&0xFF,
-        (next_hop>>24)&0xFF,(next_hop>>16)&0xFF,(next_hop>>8)&0xFF,next_hop&0xFF,(unsigned)proto);
-    printf("[IP] send: my_ip=%u.%u.%u.%u mask=0x%08x gw=%u.%u.%u.%u\n",
-        (my_ip>>24)&0xFF,(my_ip>>16)&0xFF,(my_ip>>8)&0xFF,my_ip&0xFF,
-        (unsigned)netmask,
-        (gateway>>24)&0xFF,(gateway>>16)&0xFF,(gateway>>8)&0xFF,gateway&0xFF);
-    if (arp_resolve(next_hop, dst_mac) < 0) {
-        printf("[IP] send: arp_resolve FAILED for %u.%u.%u.%u\n",
-            (next_hop>>24)&0xFF,(next_hop>>16)&0xFF,(next_hop>>8)&0xFF,next_hop&0xFF);
-        return -1;
-    }
+    if (arp_resolve(next_hop, dst_mac) < 0) return -1;
 
     h->ihl_ver  = 0x45;
     h->tos      = 0;
@@ -58,8 +47,8 @@ int ip_send(u32 dst, u8 proto, const void *data, u16 len) {
     h->ttl      = 64;
     h->proto    = proto;
     h->chk      = 0;
-    h->src      = htonl(my_ip);
-    h->dst      = htonl(dst);
+    h->src      = my_ip;
+    h->dst      = dst;
     h->chk      = ip_checksum(h, sizeof(ip_hdr_t));
 
     memcpy(buf + sizeof(ip_hdr_t), data, len);
@@ -81,23 +70,20 @@ void ip_recv(const u8 *data, u16 len) {
     ihl = (h->ihl_ver & 0x0F) * 4;
     if (ihl < 20 || ihl > len) return;
 
-    printf("[IP] recv proto=%d src=%u.%u.%u.%u dst=%u.%u.%u.%u len=%u\n",
+    printf("[IP] recv proto=%d src=%u.%u.%u.%u\n",
         (int)h->proto,
-        (ntohl(h->src)>>24)&0xFF,(ntohl(h->src)>>16)&0xFF,
-        (ntohl(h->src)>>8)&0xFF,ntohl(h->src)&0xFF,
-        (ntohl(h->dst)>>24)&0xFF,(ntohl(h->dst)>>16)&0xFF,
-        (ntohl(h->dst)>>8)&0xFF,ntohl(h->dst)&0xFF,
-        (unsigned)ntohs(h->tot_len));
+        (h->src>>24)&0xFF,(h->src>>16)&0xFF,
+        (h->src>>8)&0xFF,h->src&0xFF);
 
     switch (h->proto) {
     case IP_PROTO_ICMP:
-        icmp_recv(ntohl(h->src), data + ihl, len - ihl);
+        icmp_recv(h->src, data + ihl, len - ihl);
         break;
     case IP_PROTO_UDP:
-        udp_recv(ntohl(h->src), data + ihl, len - ihl);
+        udp_recv(h->src, data + ihl, len - ihl);
         break;
     case IP_PROTO_TCP:
-        tcp_recv_packet(ntohl(h->src), data + ihl, len - ihl);
+        tcp_recv_packet(h->src, data + ihl, len - ihl);
         break;
     default:
         break;

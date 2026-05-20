@@ -45,7 +45,7 @@ static int tcp_send_raw(tcp_conn_t *conn, u8 flags, const void *data, u16 len) {
 
     if (len) memcpy(buf + sizeof(tcp_hdr_t), data, len);
 
-    h->chk = tcp_checksum(htonl(arp_get_ip()), htonl(conn->remote_ip), buf, total);
+    h->chk = tcp_checksum(arp_get_ip(), conn->remote_ip, buf, total);
 
     return ip_send(conn->remote_ip, IP_PROTO_TCP, buf, total);
 }
@@ -65,10 +65,6 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     flags       = h->flags;
     payload_len = len - doff;
 
-    printf("[TCP] recv src=%u.%u.%u.%u sp=%u dp=%u flags=0x%02x doff=%u len=%u state=%d lport=%u\n",
-        (src_ip>>24)&0xFF,(src_ip>>16)&0xFF,(src_ip>>8)&0xFF,src_ip&0xFF,
-        ntohs(h->src_port),ntohs(h->dst_port),(unsigned)flags,(unsigned)doff,(unsigned)len,
-        (int)active_conn->state,(unsigned)active_conn->local_port);
     if (active_conn->state == TCP_SYN_SENT) {
         if (ntohs(h->dst_port) != active_conn->local_port) return;
         if ((flags & (TCP_FLAG_SYN | TCP_FLAG_ACK)) == (TCP_FLAG_SYN | TCP_FLAG_ACK)) {
@@ -76,7 +72,6 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
             active_conn->ack = ntohl(h->seq) + 1;
             active_conn->seq++;
             active_conn->state = TCP_ESTABLISHED;
-            printf("[TCP] ESTABLISHED! ack=0x%08x\n",(unsigned)active_conn->ack);
             tcp_send_raw(active_conn, TCP_FLAG_ACK, 0, 0);
         }
         return;
@@ -122,9 +117,6 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
     conn->state       = TCP_SYN_SENT;
     active_conn       = conn;
 
-    printf("[TCP] connect: sending SYN to %u.%u.%u.%u:%u lport=%u seq=0x%08x\n",
-        (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,ip&0xFF,(unsigned)port,
-        (unsigned)conn->local_port,(unsigned)conn->seq);
     tcp_send_raw(conn, TCP_FLAG_SYN, 0, 0);
 
     deadline = (u32)pit_get_ticks() + 5000;
@@ -135,7 +127,6 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
         if (conn->state == TCP_ESTABLISHED) return 0;
     }
 
-    printf("[TCP] connect: TIMEOUT waiting SYN-ACK\n");
     conn->state = TCP_CLOSED;
     active_conn = 0;
     return -1;
