@@ -99,6 +99,7 @@ cc "$KERNEL/kernel.c"            "$BUILD/kernel.o"
 
 step "Linking kernel..."
 ld -m elf_i386 -T "$SRC/linker.ld" -o "$BUILD/kernel.bin" \
+    --start-group \
     "$BUILD/boot.o"       "$BUILD/kernel.o"      "$BUILD/idt.o"      "$BUILD/isr.o"  \
     "$BUILD/vbe.o"        "$BUILD/framebuffer.o" "$BUILD/text.o"                     \
     "$BUILD/pmm.o"        "$BUILD/vmm.o"                                             \
@@ -108,7 +109,8 @@ ld -m elf_i386 -T "$SRC/linker.ld" -o "$BUILD/kernel.bin" \
     "$BUILD/ne2000.o"     "$BUILD/eth.o"         "$BUILD/arp.o"                      \
     "$BUILD/ip.o"         "$BUILD/icmp.o"        "$BUILD/udp.o"                      \
     "$BUILD/dns.o"        "$BUILD/tcp.o"         "$BUILD/http.o"                     \
-    "$BUILD/editor.o"     "$BUILD/shell.o"                                            \
+    "$BUILD/editor.o"     "$BUILD/shell.o"       \
+    --end-group \
     || die "Linking failed"
 
 KSIZE=$(stat -c%s "$BUILD/kernel.bin" 2>/dev/null || stat -f%z "$BUILD/kernel.bin")

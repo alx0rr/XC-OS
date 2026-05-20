@@ -3,6 +3,7 @@
 #include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
+#include "../../include/text.h"
 
 #define ARP_CACHE 16
 
@@ -53,6 +54,7 @@ static int cache_get(u32 ip, u8 *mac) {
             return 0;
         }
     }
+    printf("[ARP] resolve FAILED\n");
     return -1;
 }
 
@@ -87,6 +89,7 @@ void arp_recv(const u8 *data, u16 len) {
     spa = ntohl(p->spa);
     tpa = ntohl(p->tpa);
 
+    printf("[ARP] recv op=%u spa=%u.%u.%u.%u\n",(unsigned)ntohs(p->op),(spa>>24)&0xFF,(spa>>16)&0xFF,(spa>>8)&0xFF,spa&0xFF);
     cache_put(spa, p->sha);
 
     if (ntohs(p->op) == ARP_OP_REQUEST && tpa == my_ip)
@@ -98,8 +101,12 @@ int arp_resolve(u32 ip, u8 *mac_out) {
     u32 t;
     u8  i;
 
-    if (cache_get(ip, mac_out) == 0) return 0;
-
+    printf("[ARP] resolve %u.%u.%u.%u\n",(ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,ip&0xFF);
+    if (cache_get(ip, mac_out) == 0) {
+        printf("[ARP] cache hit\n");
+        return 0;
+    }
+    printf("[ARP] cache miss, sending request\n");
     for (i = 0; i < 3; i++) {
         arp_send(ARP_OP_REQUEST, zero, ip);
         t = (u32)pit_get_ticks() + 500;

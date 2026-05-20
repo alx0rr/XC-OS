@@ -5,13 +5,14 @@
 #include "../../lib/io.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
+#include "../../include/text.h"
 
 static u8  mac[ETH_ALEN];
 static u8  rx_next;
 static int ready = 0;
 
-static inline u8  rd(u8 r)         { return inb(NE_BASE + r); }
-static inline void wr(u8 r, u8 v)  { outb(NE_BASE + r, v); }
+static inline u8  rd(u8 r)        { return inb(NE_BASE + r); }
+static inline void wr(u8 r, u8 v) { outb(NE_BASE + r, v); }
 
 static void pg(u8 p) {
     u8 c = rd(NE_CMD) & ~(NE_CMD_PS1 | NE_CMD_PS0);
@@ -62,7 +63,11 @@ static void rx_one(void) {
     next = hdr.next;
     len  = hdr.len - sizeof(hdr);
 
+    printf("[NE] rx_one: rx_next=0x%02x next=0x%02x status=0x%02x len=%u\n",
+        (unsigned)rx_next, (unsigned)next, (unsigned)hdr.status, (unsigned)len);
+
     if (len == 0 || len > ETH_FRAME_MAX) {
+        printf("[NE] rx_one: bad len, skip\n");
         rx_next = next;
         pg(1); wr(NE_P1_CURR, rx_next); pg(0);
         wr(NE_BNRY, (rx_next == NE_RX_START) ? NE_RX_STOP - 1 : rx_next - 1);
@@ -82,14 +87,17 @@ static void rx_one(void) {
     pg(1); wr(NE_P1_CURR, rx_next); pg(0);
     wr(NE_BNRY, (rx_next == NE_RX_START) ? NE_RX_STOP - 1 : rx_next - 1);
 
+    printf("[NE] rx_one: calling eth_recv len=%u\n", (unsigned)len);
     eth_recv(buf, len);
 }
 
 static void ne_irq(registers_t *r) {
     u8 isr;
     (void)r;
+    printf("[NE] IRQ fired ISR=0x%02x\n", (unsigned)rd(NE_ISR));
     while ((isr = rd(NE_ISR)) & (NE_ISR_PRX | NE_ISR_RXE | NE_ISR_OVW)) {
         if (isr & NE_ISR_OVW) {
+            printf("[NE] OVW overflow!\n");
             wr(NE_CMD, NE_CMD_STOP | NE_CMD_RD2);
             pit_sleep(2);
             wr(NE_RBCR0, 0); wr(NE_RBCR1, 0);
@@ -104,17 +112,25 @@ static void ne_irq(registers_t *r) {
         }
         if (isr & NE_ISR_PRX) {
             u8 curr;
+            printf("[NE] PRX - packet received\n");
             wr(NE_ISR, NE_ISR_PRX);
             pg(1); curr = rd(NE_P1_CURR); pg(0);
+            printf("[NE] rx_next=0x%02x curr=0x%02x\n", (unsigned)rx_next, (unsigned)curr);
             while (rx_next != curr) {
                 rx_one();
                 pg(1); curr = rd(NE_P1_CURR); pg(0);
             }
         }
-        if (isr & NE_ISR_RXE) wr(NE_ISR, NE_ISR_RXE);
+        if (isr & NE_ISR_RXE) {
+            printf("[NE] RXE - receive error!\n");
+            wr(NE_ISR, NE_ISR_RXE);
+        }
     }
     if (isr & NE_ISR_PTX) wr(NE_ISR, NE_ISR_PTX);
-    if (isr & NE_ISR_TXE) wr(NE_ISR, NE_ISR_TXE);
+    if (isr & NE_ISR_TXE) {
+        printf("[NE] TXE - transmit error!\n");
+        wr(NE_ISR, NE_ISR_TXE);
+    }
     if (isr & NE_ISR_RST) wr(NE_ISR, NE_ISR_RST);
 }
 
@@ -175,6 +191,8 @@ int ne2000_send(const u8 *buf, u16 len) {
     u32 t;
     if (!ready) return -1;
 
+    printf("[NE] send len=%u\n", (unsigned)len);
+
     dma_write((u16)NE_TX_PAGE << 8, buf, len);
 
     wr(NE_TPSR,  NE_TX_PAGE);
@@ -186,13 +204,17 @@ int ne2000_send(const u8 *buf, u16 len) {
     while (!(rd(NE_ISR) & (NE_ISR_PTX | NE_ISR_TXE)) && t++ < 100000);
     wr(NE_ISR, NE_ISR_PTX | NE_ISR_TXE);
 
-    return (rd(NE_ISR) & NE_ISR_TXE) ? -1 : 0;
+    int r = (rd(NE_ISR) & NE_ISR_TXE) ? -1 : 0;
+    printf("[NE] send done ret=%d\n", r);
+    return r;
 }
 
 void ne2000_poll(void) {
     u8 curr;
     if (!ready) return;
     pg(1); curr = rd(NE_P1_CURR); pg(0);
+    if (rx_next != curr)
+        printf("[NE] poll: rx_next=0x%02x curr=0x%02x -> rx_one\n", (unsigned)rx_next, (unsigned)curr);
     while (rx_next != curr) {
         rx_one();
         pg(1); curr = rd(NE_P1_CURR); pg(0);
