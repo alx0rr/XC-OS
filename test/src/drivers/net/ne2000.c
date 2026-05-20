@@ -113,7 +113,6 @@ static void ne_irq(registers_t *r) {
         }
         if (isr & NE_ISR_RXE) wr(NE_ISR, NE_ISR_RXE);
     }
-    isr = rd(NE_ISR);
     if (isr & NE_ISR_PTX) wr(NE_ISR, NE_ISR_PTX);
     if (isr & NE_ISR_TXE) wr(NE_ISR, NE_ISR_TXE);
     if (isr & NE_ISR_RST) wr(NE_ISR, NE_ISR_RST);

@@ -6,7 +6,6 @@
 #define TCP_FLAG_FIN 0x01
 #define TCP_FLAG_SYN 0x02
 #define TCP_FLAG_RST 0x04
-#define TCP_FLAG_PSH 0x08
 #define TCP_FLAG_ACK 0x10
 
 typedef struct {
