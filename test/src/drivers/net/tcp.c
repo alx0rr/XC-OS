@@ -6,7 +6,6 @@
 #include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
-#include "../../include/text.h"
 
 static tcp_conn_t *active_conn = 0;
 
@@ -55,41 +54,35 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     u8  doff, flags;
     u16 payload_len;
 
-    if (!active_conn) { printf("[TCP] no active_conn\n"); return; }
-    if (len < sizeof(tcp_hdr_t)) { printf("[TCP] too short: %d\n", (int)len); return; }
+    if (!active_conn) return;
+    if (len < (u16)sizeof(tcp_hdr_t)) return;
 
     h    = (tcp_hdr_t*)data;
     doff = (h->data_off >> 4) * 4;
     if (doff > len) return;
 
-    printf("[TCP] pkt src=%u.%u.%u.%u:%u dst_port=%u flags=0x%x\n",
-        (src_ip>>24)&0xFF,(src_ip>>16)&0xFF,(src_ip>>8)&0xFF,src_ip&0xFF,
-        (u32)ntohs(h->src_port), (u32)ntohs(h->dst_port), (u32)h->flags);
-    printf("[TCP] expect src=%u.%u.%u.%u:%u\n",
-        (active_conn->remote_ip>>24)&0xFF,(active_conn->remote_ip>>16)&0xFF,
-        (active_conn->remote_ip>>8)&0xFF,active_conn->remote_ip&0xFF,
-        (u32)active_conn->remote_port);
-
-    if (ntohs(h->src_port) != active_conn->remote_port ||
-        src_ip              != active_conn->remote_ip) {
-        printf("[TCP] port/ip mismatch, skip\n");
-        return;
-    }
-
     flags       = h->flags;
     payload_len = len - doff;
 
+    /*
+     * SLIRP (QEMU user networking) terminates TCP itself and returns
+     * SYN-ACK from gateway IP (10.0.2.2), not from remote server IP.
+     * So in SYN_SENT state we only match on our local dst_port.
+     * In ESTABLISHED state we match src_port + src_ip normally.
+     */
     if (active_conn->state == TCP_SYN_SENT) {
-        printf("[TCP] SYN_SENT, flags=0x%x\n", (u32)flags);
+        if (ntohs(h->dst_port) != active_conn->local_port) return;
         if ((flags & (TCP_FLAG_SYN | TCP_FLAG_ACK)) == (TCP_FLAG_SYN | TCP_FLAG_ACK)) {
             active_conn->ack = ntohl(h->seq) + 1;
             active_conn->seq++;
             active_conn->state = TCP_ESTABLISHED;
             tcp_send_raw(active_conn, TCP_FLAG_ACK, 0, 0);
-            printf("[TCP] ESTABLISHED\n");
         }
         return;
     }
+
+    if (ntohs(h->src_port) != active_conn->remote_port ||
+        src_ip              != active_conn->remote_ip) return;
 
     if (active_conn->state == TCP_ESTABLISHED || active_conn->state == TCP_FIN_WAIT) {
         if (payload_len > 0) {
@@ -128,10 +121,7 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
     conn->state       = TCP_SYN_SENT;
     active_conn       = conn;
 
-    int syn_ret = tcp_send_raw(conn, TCP_FLAG_SYN, 0, 0);
-    printf("[TCP] SYN sent to %u.%u.%u.%u:%u ret=%d\n",
-        (ip>>24)&0xFF,(ip>>16)&0xFF,(ip>>8)&0xFF,ip&0xFF,
-        (u32)port, syn_ret);
+    tcp_send_raw(conn, TCP_FLAG_SYN, 0, 0);
 
     deadline = (u32)pit_get_ticks() + 5000;
     while ((u32)pit_get_ticks() < deadline) {
@@ -139,7 +129,6 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
         if (conn->state == TCP_ESTABLISHED) return 0;
     }
 
-    printf("[TCP] connect timeout, state=%d\n", (int)conn->state);
     conn->state = TCP_CLOSED;
     active_conn = 0;
     return -1;
