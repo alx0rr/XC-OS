@@ -5,7 +5,7 @@ CFG="config.cfg"
 [ -f "$CFG" ] || { echo "config.cfg not found"; exit 1; }
 source "$CFG"
 
-BUILD="build"
+BUILD="bld"
 SRC="src"
 BOOT="$SRC/boot"
 KERNEL="$SRC/kernel"
@@ -79,6 +79,11 @@ cc "$DRIVERS/storage/ata.c"          "$BUILD/ata.o"
 cc "$DRIVERS/timer/pit.c"            "$BUILD/pit.o"
 cc "$DRIVERS/sound/pcspk.c"          "$BUILD/pcspk.o"
 cc "$DRIVERS/fs/xcfs.c"              "$BUILD/xcfs.o"
+cc "$DRIVERS/net/ne2000.c"   "$BUILD/ne2000.o"
+cc "$DRIVERS/net/eth.c"      "$BUILD/eth.o"
+cc "$DRIVERS/net/arp.c"      "$BUILD/arp.o"
+cc "$DRIVERS/net/ip.c"       "$BUILD/ip.o"
+cc "$DRIVERS/net/icmp.c"     "$BUILD/icmp.o"
 
 step "Compiling IDT..."
 cc "$KERNEL/interrupts/idt.c"    "$BUILD/idt.o"
@@ -94,6 +99,7 @@ ld -m elf_i386 -T "$SRC/linker.ld" -o "$BUILD/kernel.bin" \
     "$BUILD/string.o"     "$BUILD/time.o"        "$BUILD/random.o"                  \
     "$BUILD/keyboard.o"   "$BUILD/cpu.o"         "$BUILD/ata.o"                     \
     "$BUILD/xcfs.o"       "$BUILD/pit.o"         "$BUILD/pcspk.o"                   \
+    "$BUILD/ne2000.o" "$BUILD/eth.o" "$BUILD/arp.o" "$BUILD/ip.o" "$BUILD/icmp.o" \
     || die "Linking failed"
 
 KSIZE=$(stat -c%s "$BUILD/kernel.bin" 2>/dev/null || stat -f%z "$BUILD/kernel.bin")

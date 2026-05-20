@@ -1,7 +1,9 @@
 /* 1 February 2026 */
 /* /ᐠ - ˕ -マ forker-25 and alx0rr presents */
 /* XC-OS CMD's */
-
+#include "../include/net/ne2000.h"
+#include "../include/net/arp.h"
+#include "../include/net/icmp.h"
 #include "../include/text.h"
 #include "../include/input/keyboard.h"
 #include "../include/fs/xcfs.h"
@@ -541,6 +543,100 @@ void cmd_sleep(int argc, char** argv) {
     printf("{FG(0,255,0)}Done!\n");
 }
 
+
+static int parse_ip(const char *s, u32 *ip) {
+    u32 r = 0;
+    u8  b = 0, i;
+    for (i = 0; i < 4; i++) {
+        b = 0;
+        while (*s >= '0' && *s <= '9')
+            b = b * 10 + (*s++ - '0');
+        r = (r << 8) | b;
+        if (i < 3) { if (*s != '.') return -1; s++; }
+    }
+    *ip = r;
+    return 0;
+}
+
+static void fmt_ip(u32 ip, char *buf) {
+    snprintf(buf, 16, "%u.%u.%u.%u",
+             (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
+             (ip >>  8) & 0xFF,  ip         & 0xFF);
+}
+
+void cmd_ifconfig(void) {
+    u8  m[ETH_ALEN];
+    u32 ip;
+    char ipbuf[16];
+
+    if (!ne2000_present()) {
+        printf("{FG(255,0,0)}No NE2000 adapter found\n");
+        return;
+    }
+    ne2000_get_mac(m);
+    ip = arp_get_ip();
+    fmt_ip(ip, ipbuf);
+
+    printf("{FG(0,255,255)}eth0{FG(255,255,255)}\n");
+    printf("  MAC : %02x:%02x:%02x:%02x:%02x:%02x\n",
+           m[0],m[1],m[2],m[3],m[4],m[5]);
+    printf("  IP  : %s\n", ipbuf);
+    printf("  Port: 0x%x  IRQ: %u\n", NE_BASE, NE_IRQ);
+}
+
+void cmd_ping(int argc, char **argv) {
+    u32 ip, rtt;
+    char ipbuf[16];
+    int  cnt, i, ok, fail;
+
+    if (argc < 1) {
+        printf("{FG(255,0,0)}Usage: ping <ip> [count]\n");
+        return;
+    }
+    if (parse_ip(argv[0], &ip) < 0) {
+        printf("{FG(255,0,0)}Bad IP address\n");
+        return;
+    }
+    cnt = 4;
+    if (argc >= 2) {
+        const char *p = argv[1];
+        while (*p >= '0' && *p <= '9') cnt = cnt * 10 + (*p++ - '0');
+    }
+    if (cnt <= 0 || cnt > 100) cnt = 4;
+
+    fmt_ip(ip, ipbuf);
+    printf("PING %s - %d packets\n", ipbuf, cnt);
+
+    ok = 0; fail = 0;
+    for (i = 0; i < cnt; i++) {
+        rtt = 0;
+        if (icmp_ping(ip, (u16)i, &rtt) == 0) {
+            printf("  [%d] reply from %s: %u ms\n", i, ipbuf, rtt);
+            ok++;
+        } else {
+            printf("  [%d] timeout\n", i);
+            fail++;
+        }
+        if (i < cnt - 1) pit_sleep(1000);
+    }
+    printf("%d/%d ok\n", ok, cnt);
+}
+
+void cmd_setip(int argc, char **argv) {
+    u32 ip;
+    char buf[16];
+    if (argc < 1) {
+        printf("{FG(255,0,0)}Usage: setip <x.x.x.x>\n");
+        return;
+    }
+    if (parse_ip(argv[0], &ip) < 0) {
+        printf("{FG(255,0,0)}Bad IP\n");
+        return;
+    }
+    arp_set_ip(ip);
+    fmt_ip(ip, buf);
+    printf("{FG(0,255,0)}IP set to %s\n", buf);
+}
 void cmd_countdown(int argc, char** argv) {
     if (argc < 1) {
         printf("{FG(255,0,0)}Usage: countdown <seconds>\n");
@@ -716,6 +812,9 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}bench{FG(255,255,255)}     - System benchmark\n");
     printf("  {FG(255,255,0)}rsof{FG(255,255,255)}      - Red Screen of Fuck\n");
     printf("  {FG(255,255,0)}pitbench{FG(255,255,255)}  - PIT accuracy test\n");
+    printf("  {FG(255,255,0)}ifconfig{FG(255,255,255)}  - Network interface info\n");
+    printf("  {FG(255,255,0)}ping{FG(255,255,255)} <ip> [n] - Ping host (n packets)\n");
+    printf("  {FG(255,255,0)}setip{FG(255,255,255)} <ip>  - Set IP address\n");
     printf("\n");
 
     printf("{FG(0,255,255)}=== Multitasking Commands ===\n");
@@ -814,7 +913,9 @@ void cmd(){
         else if (strcmp(cmd, "vmmtest")  == 0)  cmd_vmmtest();
         else if (strcmp(cmd, "bench")    == 0)  cmd_bench();
         else if (strcmp(cmd, "pitbench") == 0)  cmd_pitbench();
-        
+        else if (strcmp(cmd, "ifconfig") == 0) cmd_ifconfig();
+        else if (strcmp(cmd, "ping")     == 0) cmd_ping(argc, args);
+        else if (strcmp(cmd, "setip")    == 0) cmd_setip(argc, args);
         else if (strcmp(cmd, "banner")   == 0)  cmd_banner(argc, args);
         else if (strcmp(cmd, "beep")     == 0)  cmd_beep(argc, args);
         else if (strcmp(cmd, "hb")       == 0)  cmd_hb();
