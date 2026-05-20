@@ -6,6 +6,7 @@
 #include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
+#include "../../include/text.h"
 
 static tcp_conn_t *active_conn = 0;
 
@@ -54,6 +55,10 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     u8  doff, flags;
     u16 payload_len;
 
+    printf("[TCP] pkt src=%u.%u.%u.%u len=%u state=%d\n",
+        (src_ip>>24)&0xFF,(src_ip>>16)&0xFF,(src_ip>>8)&0xFF,src_ip&0xFF,
+        (unsigned)len, active_conn ? (int)active_conn->state : -1);
+
     if (!active_conn) return;
     if (len < (u16)sizeof(tcp_hdr_t)) return;
 
@@ -64,12 +69,6 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     flags       = h->flags;
     payload_len = len - doff;
 
-    /*
-     * SLIRP (QEMU user networking) terminates TCP itself and returns
-     * SYN-ACK from gateway IP (10.0.2.2), not from remote server IP.
-     * So in SYN_SENT state we only match on our local dst_port.
-     * In ESTABLISHED state we match src_port + src_ip normally.
-     */
     if (active_conn->state == TCP_SYN_SENT) {
         if (ntohs(h->dst_port) != active_conn->local_port) return;
         if ((flags & (TCP_FLAG_SYN | TCP_FLAG_ACK)) == (TCP_FLAG_SYN | TCP_FLAG_ACK)) {
