@@ -2,6 +2,8 @@
 #include "../../include/net/eth.h"
 #include "../../include/net/arp.h"
 #include "../../include/net/icmp.h"
+#include "../../include/net/udp.h"
+#include "../../include/net/tcp.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
 
@@ -64,6 +66,12 @@ void ip_recv(const u8 *data, u16 len) {
     switch (h->proto) {
     case IP_PROTO_ICMP:
         icmp_recv(ntohl(h->src), data + ihl, len - ihl);
+        break;
+    case IP_PROTO_UDP:
+        udp_recv(ntohl(h->src), data + ihl, len - ihl);
+        break;
+    case IP_PROTO_TCP:
+        tcp_recv_packet(ntohl(h->src), data + ihl, len - ihl);
         break;
     default:
         break;

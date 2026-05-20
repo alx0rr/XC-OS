@@ -79,11 +79,15 @@ cc "$DRIVERS/storage/ata.c"          "$BUILD/ata.o"
 cc "$DRIVERS/timer/pit.c"            "$BUILD/pit.o"
 cc "$DRIVERS/sound/pcspk.c"          "$BUILD/pcspk.o"
 cc "$DRIVERS/fs/xcfs.c"              "$BUILD/xcfs.o"
-cc "$DRIVERS/net/ne2000.c"   "$BUILD/ne2000.o"
-cc "$DRIVERS/net/eth.c"      "$BUILD/eth.o"
-cc "$DRIVERS/net/arp.c"      "$BUILD/arp.o"
-cc "$DRIVERS/net/ip.c"       "$BUILD/ip.o"
-cc "$DRIVERS/net/icmp.c"     "$BUILD/icmp.o"
+cc "$DRIVERS/net/ne2000.c"           "$BUILD/ne2000.o"
+cc "$DRIVERS/net/eth.c"              "$BUILD/eth.o"
+cc "$DRIVERS/net/arp.c"              "$BUILD/arp.o"
+cc "$DRIVERS/net/ip.c"               "$BUILD/ip.o"
+cc "$DRIVERS/net/icmp.c"             "$BUILD/icmp.o"
+cc "$DRIVERS/net/udp.c"              "$BUILD/udp.o"
+cc "$DRIVERS/net/dns.c"              "$BUILD/dns.o"
+cc "$DRIVERS/net/tcp.c"              "$BUILD/tcp.o"
+cc "$DRIVERS/net/http.c"             "$BUILD/http.o"
 
 step "Compiling IDT..."
 cc "$KERNEL/interrupts/idt.c"    "$BUILD/idt.o"
@@ -96,10 +100,12 @@ ld -m elf_i386 -T "$SRC/linker.ld" -o "$BUILD/kernel.bin" \
     "$BUILD/boot.o"       "$BUILD/kernel.o"      "$BUILD/idt.o"      "$BUILD/isr.o"  \
     "$BUILD/vbe.o"        "$BUILD/framebuffer.o" "$BUILD/text.o"                     \
     "$BUILD/pmm.o"        "$BUILD/vmm.o"                                             \
-    "$BUILD/string.o"     "$BUILD/time.o"        "$BUILD/random.o"                  \
-    "$BUILD/keyboard.o"   "$BUILD/cpu.o"         "$BUILD/ata.o"                     \
-    "$BUILD/xcfs.o"       "$BUILD/pit.o"         "$BUILD/pcspk.o"                   \
-    "$BUILD/ne2000.o" "$BUILD/eth.o" "$BUILD/arp.o" "$BUILD/ip.o" "$BUILD/icmp.o" \
+    "$BUILD/string.o"     "$BUILD/time.o"        "$BUILD/random.o"                   \
+    "$BUILD/keyboard.o"   "$BUILD/cpu.o"         "$BUILD/ata.o"                      \
+    "$BUILD/xcfs.o"       "$BUILD/pit.o"         "$BUILD/pcspk.o"                    \
+    "$BUILD/ne2000.o"     "$BUILD/eth.o"         "$BUILD/arp.o"                      \
+    "$BUILD/ip.o"         "$BUILD/icmp.o"        "$BUILD/udp.o"                      \
+    "$BUILD/dns.o"        "$BUILD/tcp.o"         "$BUILD/http.o"                     \
     || die "Linking failed"
 
 KSIZE=$(stat -c%s "$BUILD/kernel.bin" 2>/dev/null || stat -f%z "$BUILD/kernel.bin")
@@ -122,12 +128,12 @@ SI=$(fsize "$BUILD/xcos.img")
 
 echo ""
 echo "  Layout:"
-printf "  %-18s [sector %d]\n"           "Stage 1:"        $BOOT_STAGE1_SECTOR
-printf "  %-18s [sectors %d–%d]\n"       "Stage 2:"        $BOOT_STAGE2_SECTOR $(( BOOT_STAGE2_SECTOR + BOOT_STAGE2_COUNT - 1 ))
+printf "  %-18s [sector %d]\n"           "Stage 1:"          $BOOT_STAGE1_SECTOR
+printf "  %-18s [sectors %d–%d]\n"       "Stage 2:"          $BOOT_STAGE2_SECTOR $(( BOOT_STAGE2_SECTOR + BOOT_STAGE2_COUNT - 1 ))
 printf "  %-18s [sectors %d–%d]\n"       "Kernel (max 4MB):" $KERNEL_START_SECTOR $(( KERNEL_START_SECTOR + KERNEL_MAX_SECTORS - 1 ))
-printf "  %-18s [sectors %d–%d]\n"       "XCFS metadata:"  $XCFS_META_SECTOR $(( XCFS_META_SECTOR + XCFS_META_SECTORS - 1 ))
-printf "  %-18s [sector %d+]\n"          "XCFS data:"      $XCFS_DATA_SECTOR
+printf "  %-18s [sectors %d–%d]\n"       "XCFS metadata:"    $XCFS_META_SECTOR    $(( XCFS_META_SECTOR + XCFS_META_SECTORS - 1 ))
+printf "  %-18s [sector %d+]\n"          "XCFS data:"        $XCFS_DATA_SECTOR
 echo ""
-printf "  %-18s %d bytes (%d MB)\n"      "Image total:"    $SI $IMAGE_SIZE_MB
+printf "  %-18s %d bytes (%d MB)\n"      "Image total:"      $SI $IMAGE_SIZE_MB
 echo ""
 ok "Done → $BUILD/xcos.img"

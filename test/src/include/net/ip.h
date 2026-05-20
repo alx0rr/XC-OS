@@ -17,6 +17,8 @@ typedef struct {
 } PACKED ip_hdr_t;
 
 #define IP_PROTO_ICMP 1
+#define IP_PROTO_TCP  6
+#define IP_PROTO_UDP  17
 #define IP_PROTO_UDP  17
 
 void ip_recv(const u8 *data, u16 len);
