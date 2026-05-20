@@ -605,7 +605,7 @@ void cmd_ping(int argc, char **argv) {
     if (cnt <= 0 || cnt > 100) cnt = 4;
 
     fmt_ip(ip, ipbuf);
-    printf("PING %s — %d packets\n", ipbuf, cnt);
+    printf("PING %s - %d packets\n", ipbuf, cnt);
 
     ok = 0; fail = 0;
     for (i = 0; i < cnt; i++) {
