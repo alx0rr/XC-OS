@@ -53,10 +53,10 @@ void startup() {
             0xFFFFFF00,   /* 255.255.255.0    */
             0x0A000202    /* 10.0.2.2  */
         );
-        dns_init(0x0A000203); /* 10.0.2.3 - QEMU DNS */
+        dns_init(0x08080808); /* 8.8.8.8 - Google DNS */
         printf("{FG(0,255,0)}[OK]{FG(255,255,255)} NE2000 MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
                m[0],m[1],m[2],m[3],m[4],m[5]);
-        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Network ready (10.0.2.15, DNS 10.0.2.3)\n");
+        printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Network ready i think?\n");
     } else {
         printf("{FG(255,255,0)}[--]{FG(255,255,255)} NE2000 not found\n");
     }

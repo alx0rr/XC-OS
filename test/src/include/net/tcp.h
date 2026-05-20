@@ -30,6 +30,7 @@ typedef enum {
 
 typedef struct {
     u32        remote_ip;
+    u32        peer_ip;
     u16        remote_port;
     u16        local_port;
     u32        seq;

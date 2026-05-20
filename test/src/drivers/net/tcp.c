@@ -73,6 +73,7 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     if (active_conn->state == TCP_SYN_SENT) {
         if (ntohs(h->dst_port) != active_conn->local_port) return;
         if ((flags & (TCP_FLAG_SYN | TCP_FLAG_ACK)) == (TCP_FLAG_SYN | TCP_FLAG_ACK)) {
+            active_conn->peer_ip = src_ip;
             active_conn->ack = ntohl(h->seq) + 1;
             active_conn->seq++;
             active_conn->state = TCP_ESTABLISHED;
@@ -82,7 +83,7 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     }
 
     if (ntohs(h->src_port) != active_conn->remote_port ||
-        src_ip              != active_conn->remote_ip) return;
+        src_ip              != active_conn->peer_ip) return;
 
     if (active_conn->state == TCP_ESTABLISHED || active_conn->state == TCP_FIN_WAIT) {
         if (payload_len > 0) {
