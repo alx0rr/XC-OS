@@ -6,6 +6,7 @@
 #include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
+#include "../../include/text.h"
 
 static tcp_conn_t *active_conn = 0;
 
@@ -54,25 +55,38 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     u8  doff, flags;
     u16 payload_len;
 
-    if (!active_conn) return;
-    if (len < sizeof(tcp_hdr_t)) return;
+    if (!active_conn) { printf("[TCP] no active_conn\n"); return; }
+    if (len < sizeof(tcp_hdr_t)) { printf("[TCP] too short: %d\n", (int)len); return; }
 
     h    = (tcp_hdr_t*)data;
     doff = (h->data_off >> 4) * 4;
     if (doff > len) return;
 
+    printf("[TCP] pkt src=%u.%u.%u.%u:%u dst_port=%u flags=0x%x\n",
+        (src_ip>>24)&0xFF,(src_ip>>16)&0xFF,(src_ip>>8)&0xFF,src_ip&0xFF,
+        (u32)ntohs(h->src_port), (u32)ntohs(h->dst_port), (u32)h->flags);
+    printf("[TCP] expect src=%u.%u.%u.%u:%u\n",
+        (active_conn->remote_ip>>24)&0xFF,(active_conn->remote_ip>>16)&0xFF,
+        (active_conn->remote_ip>>8)&0xFF,active_conn->remote_ip&0xFF,
+        (u32)active_conn->remote_port);
+
     if (ntohs(h->src_port) != active_conn->remote_port ||
-        src_ip              != active_conn->remote_ip) return;
+        src_ip              != active_conn->remote_ip) {
+        printf("[TCP] port/ip mismatch, skip\n");
+        return;
+    }
 
     flags       = h->flags;
     payload_len = len - doff;
 
     if (active_conn->state == TCP_SYN_SENT) {
+        printf("[TCP] SYN_SENT, flags=0x%x\n", (u32)flags);
         if ((flags & (TCP_FLAG_SYN | TCP_FLAG_ACK)) == (TCP_FLAG_SYN | TCP_FLAG_ACK)) {
             active_conn->ack = ntohl(h->seq) + 1;
             active_conn->seq++;
             active_conn->state = TCP_ESTABLISHED;
             tcp_send_raw(active_conn, TCP_FLAG_ACK, 0, 0);
+            printf("[TCP] ESTABLISHED\n");
         }
         return;
     }
