@@ -70,6 +70,11 @@ void ip_recv(const u8 *data, u16 len) {
     ihl = (h->ihl_ver & 0x0F) * 4;
     if (ihl < 20 || ihl > len) return;
 
+    printf("[IP] recv proto=%d src=%u.%u.%u.%u\n",
+        (int)h->proto,
+        (ntohl(h->src)>>24)&0xFF,(ntohl(h->src)>>16)&0xFF,
+        (ntohl(h->src)>>8)&0xFF,ntohl(h->src)&0xFF);
+
     switch (h->proto) {
     case IP_PROTO_ICMP:
         icmp_recv(ntohl(h->src), data + ihl, len - ihl);
