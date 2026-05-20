@@ -21,43 +21,47 @@ void fb_putpixel(uint16_t x, uint16_t y, uint32_t color) {
     }
 }
 
+void fb_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint32_t color) {
+    vbe_info_t vbe = get_vbe_struct();
+    uint8_t  *fb   = vbe_get_framebuffer();
+    uint16_t  pitch = vbe.pitch;
+
+    if (x >= vbe.width || y >= vbe.height) return;
+    if ((uint32_t)x + w > vbe.width)  w = (uint16_t)(vbe.width  - x);
+    if ((uint32_t)y + h > vbe.height) h = (uint16_t)(vbe.height - y);
+
+    if (vbe.bpp == 32) {
+        uint32_t row_buf[w];
+        for (uint16_t i = 0; i < w; i++) row_buf[i] = color;
+        for (uint16_t row = 0; row < h; row++)
+            memcpy(fb + (y + row) * pitch + x * 4, row_buf, (uint32_t)w * 4);
+    } else if (vbe.bpp == 24) {
+        uint8_t row_buf[w * 3];
+        for (uint16_t i = 0; i < w; i++) {
+            row_buf[i*3+0] =  color        & 0xFF;
+            row_buf[i*3+1] = (color >>  8) & 0xFF;
+            row_buf[i*3+2] = (color >> 16) & 0xFF;
+        }
+        for (uint16_t row = 0; row < h; row++)
+            memcpy(fb + (y + row) * pitch + x * 3, row_buf, (uint32_t)w * 3);
+    }
+}
+
 void fb_fill(uint32_t color) {
     vbe_info_t vbe = get_vbe_struct();
-    for (uint32_t y = 0; y < vbe.height; y++)
-        for (uint32_t x = 0; x < vbe.width; x++)
-            fb_putpixel(x, y, color);
+    fb_fill_rect(0, 0, vbe.width, vbe.height, color);
 }
 
 uint16_t fb_get_height() { return vbe_get_height(); }
-uint16_t fb_get_width() { return vbe_get_width(); }
+uint16_t fb_get_width()  { return vbe_get_width();  }
 
 void fb_scroll_up(uint16_t pixels, uint32_t bg_color) {
     vbe_info_t vbe = get_vbe_struct();
-    uint8_t* fb = vbe_get_framebuffer();
+    uint8_t   *fb  = vbe_get_framebuffer();
+    uint32_t row_size    = vbe.pitch;
+    uint32_t scroll_bytes = (uint32_t)pixels * row_size;
+    uint32_t total_bytes  = (uint32_t)vbe.height * row_size;
 
-    uint32_t bytes_per_pixel = vbe.bpp / 8;
-    uint32_t row_size = vbe.pitch;
-    uint32_t scroll_bytes = pixels * row_size;
-    uint32_t total_bytes = vbe.height * row_size;
-
-    memmove(
-        fb,
-        fb + scroll_bytes,
-        total_bytes - scroll_bytes
-    );
-
-    uint8_t* bottom = fb + (vbe.height * row_size) - scroll_bytes;
-    for (uint32_t y = 0; y < pixels; y++) {
-        for (uint32_t x = 0; x < vbe.width; x++) {
-            if (bytes_per_pixel == 3) {
-                uint8_t* p = bottom + y * row_size + x * 3;
-                p[0] = bg_color & 0xFF;
-                p[1] = (bg_color >> 8) & 0xFF;
-                p[2] = (bg_color >> 16) & 0xFF;
-            } else {
-                uint32_t* p = (uint32_t*)(bottom + y * row_size + x * 4);
-                *p = bg_color;
-            }
-        }
-    }
+    memmove(fb, fb + scroll_bytes, total_bytes - scroll_bytes);
+    fb_fill_rect(0, (uint16_t)(vbe.height - pixels), vbe.width, pixels, bg_color);
 }

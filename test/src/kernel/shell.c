@@ -19,7 +19,6 @@
 #include "../include/sound/pcspk.h"
 #include "../lib/time.h"
 #include "../lib/io.h"
-#include "editor.c"
 
 extern void cmd_help(void);
 extern void cmd_ls(int, char**);
@@ -58,6 +57,26 @@ extern void cmd_beep(int, char**);
 extern void cmd_hb(void);
 extern void poweroff();
 extern volatile uint8_t ctrl_pressed;
+
+static void fmt_ip(u32 ip, char *buf) {
+    snprintf(buf, 16, "%u.%u.%u.%u",
+             (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
+             (ip >>  8) & 0xFF,  ip         & 0xFF);
+}
+
+static int parse_ip(const char *s, u32 *ip) {
+    u32 r = 0;
+    u8  i;
+    for (i = 0; i < 4; i++) {
+        u8 b = 0;
+        while (*s >= '0' && *s <= '9') b = b * 10 + (*s++ - '0');
+        r = (r << 8) | b;
+        if (i < 3) { if (*s != '.') return -1; s++; }
+    }
+    *ip = r;
+    return 0;
+}
+
 
 static void cmd_setdns(int argc, char **argv) {
     u32 ip;
@@ -98,29 +117,37 @@ static void cmd_wget(int argc, char **argv) {
 
     if (strncmp(p, "http://", 7) == 0) p += 7;
 
-    u8 i = 0;
+    u32 i = 0;
     while (*p && *p != '/' && *p != ':' && i < 127) host[i++] = *p++;
+    host[i] = '\0';
     if (*p == ':') {
         p++;
         port = 0;
-        while (*p >= '0' && *p <= '9') port = port * 10 + (*p++ - '0');
+        while (*p >= '0' && *p <= '9') port = (u16)(port * 10 + (*p++ - '0'));
     }
     if (*p == '/') strncpy(path, p, 255);
+    else { path[0] = '/'; path[1] = '\0'; }
 
-    printf("Connecting to %s:%u%s\n", host, port, path);
+    printf("Resolving %s...\n", host);
 
     static u8 resp[65536];
     u32 out_len = 0;
     int status  = 0;
 
-    if (http_get(host, port, path, resp, sizeof(resp), &out_len, &status) < 0) {
-        printf("{FG(255,0,0)}Connection failed\n");
+    if (http_get(host, (u16)port, path, resp, sizeof(resp), &out_len, &status) < 0) {
+        printf("{FG(255,0,0)}Failed: could not connect to %s:%d\n", host, (int)port);
         return;
     }
-    printf("HTTP %d, %u bytes\n", status, out_len);
 
-    u8 *body    = resp;
-    u32 body_sz = out_len;
+    if (out_len == 0) {
+        printf("{FG(255,0,0)}Failed: empty response\n");
+        return;
+    }
+
+    printf("HTTP %d, %u bytes total\n", status, out_len);
+
+    u8  *body    = resp;
+    u32  body_sz = out_len;
 
     for (u32 j = 0; j + 3 < out_len; j++) {
         if (resp[j]=='\r' && resp[j+1]=='\n' && resp[j+2]=='\r' && resp[j+3]=='\n') {
@@ -130,11 +157,18 @@ static void cmd_wget(int argc, char **argv) {
         }
     }
 
+    if (body_sz == 0) {
+        printf("{FG(255,255,0)}Warning: empty body\n");
+    }
+
     xcfs_dirent_t info;
     if (xcfs_stat(filename, &info) == 0) xcfs_delete(filename);
-    xcfs_create(filename, body_sz);
+    if (xcfs_create(filename, body_sz) < 0) {
+        printf("{FG(255,0,0)}Failed to create file %s\n", filename);
+        return;
+    }
     xcfs_write(filename, body, body_sz);
-    printf("{FG(0,255,0)}Saved %u bytes to %s\n", body_sz, filename);
+    printf("{FG(0,255,0)}Saved %u bytes -> %s\n", body_sz, filename);
 }
 
 static void cmd_post(int argc, char **argv) {
