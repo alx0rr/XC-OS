@@ -3,6 +3,7 @@
 #include "../../include/timer/pit.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
+#include "../../include/net/ne2000.h"
 
 #define ARP_CACHE 16
 
@@ -67,9 +68,9 @@ static void arp_send(u16 op, const u8 *tha, u32 tpa) {
     p.plen  = 4;
     p.op    = htons(op);
     memcpy(p.sha, my_mac, ETH_ALEN);
-    p.spa   = htonl(my_ip);
+    p.spa   = my_ip;
     memcpy(p.tha, tha, ETH_ALEN);
-    p.tpa   = htonl(tpa);
+    p.tpa   = tpa;
 
     eth_send(op == ARP_OP_REQUEST ? bcast : tha, ETH_TYPE_ARP, &p, sizeof(p));
 }
@@ -84,8 +85,8 @@ void arp_recv(const u8 *data, u16 len) {
     if (ntohs(p->htype) != 1)           return;
     if (ntohs(p->ptype) != ETH_TYPE_IP) return;
 
-    spa = ntohl(p->spa);
-    tpa = ntohl(p->tpa);
+    spa = p->spa;
+    tpa = p->tpa;
 
     cache_put(spa, p->sha);
 

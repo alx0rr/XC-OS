@@ -248,6 +248,7 @@ void keyboard_init(void) {
     keyboard_flush_buffer();
 }
 
+char keyboard_getchar_raw(void);
 static char keyboard_getchar(void) {
     while (buffer_head == buffer_tail) {
         asm volatile("hlt");
@@ -289,4 +290,11 @@ char* keyboard_input(void) {
 
 bool keyboard_key(uint8_t keycode) {
     return 0;
+}
+
+char keyboard_getchar_raw(void) {
+    while (buffer_head == buffer_tail) asm volatile("hlt");
+    char c = input_buffer[buffer_tail];
+    buffer_tail = (buffer_tail + 1) % KEYBOARD_BUFFER_SIZE;
+    return c;
 }

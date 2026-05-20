@@ -2,6 +2,8 @@
 #include "../../include/net/eth.h"
 #include "../../include/net/arp.h"
 #include "../../include/net/icmp.h"
+#include "../../include/net/udp.h"
+#include "../../include/net/tcp.h"
 #include "../../lib/string.h"
 #include "../../lib/types.h"
 
@@ -44,8 +46,8 @@ int ip_send(u32 dst, u8 proto, const void *data, u16 len) {
     h->ttl      = 64;
     h->proto    = proto;
     h->chk      = 0;
-    h->src      = htonl(my_ip);
-    h->dst      = htonl(dst);
+    h->src      = my_ip;
+    h->dst      = dst;
     h->chk      = ip_checksum(h, sizeof(ip_hdr_t));
 
     memcpy(buf + sizeof(ip_hdr_t), data, len);
@@ -63,7 +65,13 @@ void ip_recv(const u8 *data, u16 len) {
 
     switch (h->proto) {
     case IP_PROTO_ICMP:
-        icmp_recv(ntohl(h->src), data + ihl, len - ihl);
+        icmp_recv(h->src, data + ihl, len - ihl);
+        break;
+    case IP_PROTO_UDP:
+        udp_recv(h->src, data + ihl, len - ihl);
+        break;
+    case IP_PROTO_TCP:
+        tcp_recv_packet(h->src, data + ihl, len - ihl);
         break;
     default:
         break;
