@@ -55,10 +55,6 @@ void tcp_recv_packet(u32 src_ip, const u8 *data, u16 len) {
     u8  doff, flags;
     u16 payload_len;
 
-    printf("[TCP] pkt src=%u.%u.%u.%u len=%u state=%d\n",
-        (src_ip>>24)&0xFF,(src_ip>>16)&0xFF,(src_ip>>8)&0xFF,src_ip&0xFF,
-        (unsigned)len, active_conn ? (int)active_conn->state : -1);
-
     if (!active_conn) return;
     if (len < (u16)sizeof(tcp_hdr_t)) return;
 
@@ -124,7 +120,9 @@ int tcp_connect(tcp_conn_t *conn, u32 ip, u16 port) {
     tcp_send_raw(conn, TCP_FLAG_SYN, 0, 0);
 
     deadline = (u32)pit_get_ticks() + 5000;
+    asm volatile("sti");
     while ((u32)pit_get_ticks() < deadline) {
+        asm volatile("hlt");
         ne2000_poll();
         if (conn->state == TCP_ESTABLISHED) return 0;
     }
@@ -143,7 +141,9 @@ int tcp_send(tcp_conn_t *conn, const void *data, u16 len) {
 
 int tcp_recv(tcp_conn_t *conn, void *buf, u16 maxlen, u32 timeout_ms) {
     u32 deadline = (u32)pit_get_ticks() + timeout_ms;
+    asm volatile("sti");
     while ((u32)pit_get_ticks() < deadline) {
+        asm volatile("hlt");
         ne2000_poll();
         if (conn->rx_len > 0) {
             u16 copy = conn->rx_len < maxlen ? conn->rx_len : maxlen;
@@ -169,7 +169,9 @@ void tcp_close(tcp_conn_t *conn) {
         conn->seq++;
         conn->state = TCP_FIN_WAIT;
         u32 deadline = (u32)pit_get_ticks() + 2000;
+        asm volatile("sti");
         while ((u32)pit_get_ticks() < deadline) {
+            asm volatile("hlt");
             ne2000_poll();
             if (conn->state == TCP_TIME_WAIT) break;
         }
