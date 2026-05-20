@@ -15,9 +15,6 @@
 #include "../include/net/eth.h"
 #include "../include/net/arp.h"
 #include "../lib/types.h"
-#include "../include/net/ne2000.h"
-#include "../include/net/eth.h"
-#include "../include/net/arp.h"
 
 void startup() {
     vbe_init();
@@ -49,7 +46,11 @@ void startup() {
         u8 m[6];
         eth_init();
         ne2000_get_mac(m);
-        arp_init(0x0A000202);
+        arp_init(
+            0x0A00020F,   /* 10.0.2.15  */
+            0xFFFFFF00,   /* 255.255.255.0 */
+            0x0A000202    /* 10.0.2.2 gateway (QEMU default) */
+        );
         printf("{FG(0,255,0)}[OK]{FG(255,255,255)} NE2000 MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
                m[0],m[1],m[2],m[3],m[4],m[5]);
     } else {

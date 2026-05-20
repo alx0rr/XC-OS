@@ -19,10 +19,12 @@ typedef struct {
     u32 tpa;
 } PACKED arp_pkt_t;
 
-void arp_init(u32 ip);
+void arp_init(u32 ip, u32 netmask, u32 gateway);
 void arp_recv(const u8 *data, u16 len);
 int  arp_resolve(u32 ip, u8 *mac_out);
 void arp_set_ip(u32 ip);
 u32  arp_get_ip(void);
+u32  arp_get_netmask(void);
+u32  arp_get_gateway(void);
 
 #endif

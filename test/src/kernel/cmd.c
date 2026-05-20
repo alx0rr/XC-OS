@@ -597,7 +597,7 @@ void cmd_ping(int argc, char **argv) {
         printf("{FG(255,0,0)}Bad IP address\n");
         return;
     }
-    cnt = (argc >= 2) ? 0 : 4;
+    cnt = 4;
     if (argc >= 2) {
         const char *p = argv[1];
         while (*p >= '0' && *p <= '9') cnt = cnt * 10 + (*p++ - '0');
@@ -605,7 +605,7 @@ void cmd_ping(int argc, char **argv) {
     if (cnt <= 0 || cnt > 100) cnt = 4;
 
     fmt_ip(ip, ipbuf);
-    printf("PING %s — %d packets\n", ipbuf, cnt);
+    printf("PING %s - %d packets\n", ipbuf, cnt);
 
     ok = 0; fail = 0;
     for (i = 0; i < cnt; i++) {

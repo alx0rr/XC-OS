@@ -19,13 +19,22 @@ u16 ip_checksum(const void *data, u16 len) {
 int ip_send(u32 dst, u8 proto, const void *data, u16 len) {
     u8 buf[ETH_FRAME_MAX];
     ip_hdr_t *h = (ip_hdr_t*)buf;
-    u8 dst_mac[ETH_ALEN];
+    u8  dst_mac[ETH_ALEN];
     u16 tot;
+    u32 my_ip   = arp_get_ip();
+    u32 netmask = arp_get_netmask();
+    u32 gateway = arp_get_gateway();
+    u32 next_hop;
 
     tot = sizeof(ip_hdr_t) + len;
     if (tot > ETH_FRAME_MAX) return -1;
 
-    if (arp_resolve(dst, dst_mac) < 0) return -1;
+    if ((dst & netmask) == (my_ip & netmask))
+        next_hop = dst;
+    else
+        next_hop = gateway;
+
+    if (arp_resolve(next_hop, dst_mac) < 0) return -1;
 
     h->ihl_ver  = 0x45;
     h->tos      = 0;
@@ -35,8 +44,8 @@ int ip_send(u32 dst, u8 proto, const void *data, u16 len) {
     h->ttl      = 64;
     h->proto    = proto;
     h->chk      = 0;
-    h->src      = arp_get_ip();
-    h->dst      = dst;
+    h->src      = htonl(my_ip);
+    h->dst      = htonl(dst);
     h->chk      = ip_checksum(h, sizeof(ip_hdr_t));
 
     memcpy(buf + sizeof(ip_hdr_t), data, len);
@@ -54,7 +63,7 @@ void ip_recv(const u8 *data, u16 len) {
 
     switch (h->proto) {
     case IP_PROTO_ICMP:
-        icmp_recv(h->src, data + ihl, len - ihl);
+        icmp_recv(ntohl(h->src), data + ihl, len - ihl);
         break;
     default:
         break;

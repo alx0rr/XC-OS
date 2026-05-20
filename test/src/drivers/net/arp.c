@@ -13,14 +13,20 @@ typedef struct {
 } arp_entry_t;
 
 static arp_entry_t cache[ARP_CACHE];
-static u32 my_ip = 0;
+static u32 my_ip   = 0;
+static u32 my_mask = 0;
+static u32 my_gw   = 0;
 static u8  bcast[ETH_ALEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 void arp_set_ip(u32 ip) { my_ip = ip; }
-u32  arp_get_ip(void)   { return my_ip; }
+u32  arp_get_ip(void)      { return my_ip; }
+u32  arp_get_netmask(void) { return my_mask; }
+u32  arp_get_gateway(void) { return my_gw; }
 
-void arp_init(u32 ip) {
-    my_ip = ip;
+void arp_init(u32 ip, u32 netmask, u32 gateway) {
+    my_ip   = ip;
+    my_mask = netmask;
+    my_gw   = gateway;
     memset(cache, 0, sizeof(cache));
 }
 
@@ -61,25 +67,30 @@ static void arp_send(u16 op, const u8 *tha, u32 tpa) {
     p.plen  = 4;
     p.op    = htons(op);
     memcpy(p.sha, my_mac, ETH_ALEN);
-    p.spa   = my_ip;
+    p.spa   = htonl(my_ip);
     memcpy(p.tha, tha, ETH_ALEN);
-    p.tpa   = tpa;
+    p.tpa   = htonl(tpa);
 
     eth_send(op == ARP_OP_REQUEST ? bcast : tha, ETH_TYPE_ARP, &p, sizeof(p));
 }
 
 void arp_recv(const u8 *data, u16 len) {
     arp_pkt_t *p;
+    u32 spa, tpa;
+
     if (len < (u16)sizeof(arp_pkt_t)) return;
     p = (arp_pkt_t*)data;
 
     if (ntohs(p->htype) != 1)           return;
     if (ntohs(p->ptype) != ETH_TYPE_IP) return;
 
-    cache_put(p->spa, p->sha);
+    spa = ntohl(p->spa);
+    tpa = ntohl(p->tpa);
 
-    if (ntohs(p->op) == ARP_OP_REQUEST && p->tpa == my_ip)
-        arp_send(ARP_OP_REPLY, p->sha, p->spa);
+    cache_put(spa, p->sha);
+
+    if (ntohs(p->op) == ARP_OP_REQUEST && tpa == my_ip)
+        arp_send(ARP_OP_REPLY, p->sha, spa);
 }
 
 int arp_resolve(u32 ip, u8 *mac_out) {
