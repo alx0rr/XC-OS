@@ -2,6 +2,8 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 BRANCH ?= main
+MSG    ?=
+TARGET ?=
 
 # ─── Colours ────────────────────────────────────────────────────────────────
 BLUE  := \e[1;34m
@@ -195,18 +197,6 @@ qemu:
 		-serial stdio \
 		-display default
 	@$(call ok,"Done")
-
-
-# ─── Git helpers ─────────────────────────────────────────────────────────────
-# Usage:
-#   make push [MSG="your message"]          — stage all, commit, push
-#   make push MSG="release"                 — stage, commit, push, create GitHub Release
-#   make fetch                              — fetch --all + pull --rebase --autostash
-#   make git-list                           — last 20 branches sorted by date
-#   make rollback TARGET=<branch>           — force main to point to <branch>
-
-MSG    ?=
-TARGET ?=
 
 push:
 	@set -euo pipefail; \
