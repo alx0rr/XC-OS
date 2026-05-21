@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+R_DIR="$(cd "$(dirname "$0")" && pwd)"
+G_CMD=(git -C "$R_DIR")
+
+p_use() {
+  cat <<EOF
+Usage: $(basename "$0") <push|fetch> [msg]
+
+Commands:
+  push [msg]       Stage all, commit and push to origin/main
+  push release     Stage, commit, push, generate AI notes and create GitHub Release with img
+  fetch            Fetch all remotes and pull --rebase --autostash
+  list             Show last 20 branches sorted by date
+  rollback <name>  Force main to point to <name> and reset
+EOF
+}
+
+if [ $# -lt 1 ]; then
+  p_use
+  exit 2
+fi
+
+cmd="$1"
+shift || true
+
+case "$cmd" in
+  push)
+    is_rel=0
+    msg=""
+
+    if [ $# -gt 0 ] && [ "$1" = "release" ]; then
+      is_rel=1
+      shift || true
+      msg="${*:-}"
+    else
+      msg="${*:-}"
+    fi
+
+    st="$(${G_CMD[@]} status --porcelain)"
+    if [ -z "$st" ] && [ "$is_rel" -eq 0 ]; then
+      echo "No changes to commit."
+      exit 0
+    fi
+
+    if [ -z "$msg" ]; then
+      msg="auto: $(date -u +"%Y-%m-%d %H:%M:%SZ")"
+    fi
+
+    if [ -n "$st" ]; then
+      echo "Staging changes..."
+      ${G_CMD[@]} add -A
+      echo "Committing..."
+      ${G_CMD[@]} commit -m "$msg"
+    fi
+
+    echo "Pushing to origin/main..."
+    ${G_CMD[@]} push origin main
+
+    if [ "$is_rel" -eq 1 ]; then
+      echo "Starting release process..."
+      
+      img="$R_DIR/bld/xcos.img"
+      if [ ! -f "$img" ]; then
+        echo "Error: $img not found!" >&2
+        exit 5
+      fi
+
+      ver="v$(date -u +"%Y%m%d-%H%M%S")"
+      
+      echo "Creating tag $ver..."
+      ${G_CMD[@]} tag -a "$ver" -m "Release $ver"
+      ${G_CMD[@]} push origin "$ver"
+
+      echo "Asking Copilot to generate release notes..."
+      log="$(${G_CMD[@]} log -n 5 --oneline)"
+      prompt="Generate a short, professional changelog for a GitHub Release in markdown based on these recent commits: $log"
+      
+      notes=$(gh copilot explain "$prompt" 2>/dev/null || echo "Automated release from codespace. File: xcos.img")
+
+      echo "Creating GitHub Release and uploading $img..."
+      gh release create "$ver" "$img" --title "Release $ver" --notes "$notes"
+      
+      echo "Release $ver successfully created with Copilot notes!"
+    fi
+    ;;
+
+  fetch)
+    echo "Fetching and pulling..."
+    ${G_CMD[@]} fetch --all --prune
+    ${G_CMD[@]} pull --rebase --autostash
+    ;;
+
+  list)
+    ${G_CMD[@]} for-each-ref --sort=-committerdate --format='%(refname:short) %(committerdate:iso8601)' refs/heads refs/remotes | sed 's@refs/remotes/@@' | awk '!seen[$0]++' | head -n 20
+    ;;
+
+  rollback)
+    if [ $# -lt 1 ]; then
+      p_use
+      exit 2
+    fi
+    tgt="$1"
+    ${G_CMD[@]} fetch --all --prune
+
+    if ${G_CMD[@]} show-ref --verify --quiet "refs/heads/$tgt"; then
+      ref="refs/heads/$tgt"
+    elif ${G_CMD[@]} show-ref --verify --quiet "refs/remotes/origin/$tgt"; then
+      ref="refs/remotes/origin/$tgt"
+    else
+      echo "Branch '$tgt' not found." >&2
+      exit 3
+    fi
+
+    ${G_CMD[@]} checkout -B main "$ref"
+    ${G_CMD[@]} reset --hard "$ref"
+    ;;
+
+  -h|--help)
+    p_use
+    ;;
+
+  *)
+    echo "Unknown: $cmd" >&2
+    p_use
+    exit 2
+    ;;
+esac
