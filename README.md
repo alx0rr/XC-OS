@@ -21,11 +21,11 @@ Please think carefully before installing it on real hardware.
 
 ---
 
-building the img file with build.sh:
+building the img file
 </div>
 
 ```shell
-cd project && sh build.sh
+make build
 ```
 
 <div align="center">
@@ -34,7 +34,7 @@ usage with qemu:
 <br>
 
 ```shell
-qemu-system-x86_64   -drive file=build/xcos.img
+make qemu
 ```
 
 
