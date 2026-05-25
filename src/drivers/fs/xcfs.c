@@ -442,13 +442,17 @@ int xcfs_list(const char* path) {
             printf("{FG(100,200,255)}[DIR]{FG(255,255,255)}  %s\n", d->name);
             dirs++;
         } else {
-            const char* col = (d->flags & XCFS_FLAG_EXECUTABLE)
-                              ? "{FG(0,255,0)}" : "{FG(255,255,255)}";
             uint32_t sv = d->size;
             const char* su = "B";
             if      (sv >= 1024*1024) { sv /= 1024*1024; su = "MB"; }
             else if (sv >= 1024)      { sv /= 1024;      su = "KB"; }
-            printf("%s%s {FG(150,150,150)}(%u %s)\n", col, d->name, sv, su);
+            if (d->flags & XCFS_FLAG_EXECUTABLE) {
+                printf("{FG(0,255,0)}%s {FG(150,150,150)}(%u %s){FG(255,255,255)}\n",
+                       d->name, sv, su);
+            } else {
+                printf("{FG(255,255,255)}%s {FG(150,150,150)}(%u %s)\n",
+                       d->name, sv, su);
+            }
             files++;
             tsz += d->size;
         }
