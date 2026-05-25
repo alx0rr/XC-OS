@@ -244,7 +244,7 @@ void cmd_tree(int argc, char** argv) {
 }
 
 void cmd_uname(void) {
-    printf("XC-OS v0.3 i386 (XCFS v2)\n");
+    printf("XC-OS v0.6 i386 (XCFS v2)\n");
 }
 
 void cmd_free(void) {
@@ -300,7 +300,7 @@ void cmd_sysinfo(void) {
     printf("{FG(0,255,255)}==================\n\n");
     printf("{FG(0,255,0)}OS:\n");
     printf("  Name:    XC-OS\n");
-    printf("  Version: 0.3\n");
+    printf("  Version: 0.6\n");
     printf("  Arch:    i386 (x86)\n");
     printf("  FS:      XCFS v2\n\n");
     printf("{FG(0,255,0)}Time:\n");
