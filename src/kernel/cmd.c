@@ -67,10 +67,11 @@ void cmd_cat(int argc, char** argv) {
         printf("{FG(255,0,0)}cat: out of memory\n");
         return;
     }
-    if (xcfs_read(argv[0], buffer, size - 1) == 0) {
-        buffer[size - 1] = 0;
+    int rd = xcfs_read(argv[0], buffer, size - 1);
+    if (rd >= 0) {
+        buffer[rd] = 0;
         printf("{FG(0,255,0)}");
-        for (uint32_t i = 0; i < size - 1 && buffer[i]; i++) {
+        for (int i = 0; i < rd; i++) {
             printf("%c", buffer[i]);
         }
         printf("{FG(255,255,255)}\n");
@@ -165,7 +166,7 @@ void cmd_cp(int argc, char** argv) {
         printf("{FG(255,0,0)}cp: out of memory\n");
         return;
     }
-    if (xcfs_read(argv[0], buffer, size) != 0) {
+    if (xcfs_read(argv[0], buffer, size) < 0) {
         printf("{FG(255,0,0)}cp: cannot read '%s'\n", argv[0]);
         pmm_free(buffer);
         return;
@@ -828,4 +829,3 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}hb{FG(255,255,255)}        - Play Happy Birthday\n");
     printf("\n");
 }
-

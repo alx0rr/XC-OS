@@ -40,7 +40,7 @@ typedef struct {
     uint32_t first_child_idx;
     uint32_t created;
     uint32_t modified;
-    uint8_t  reserved[236];
+    uint8_t  reserved[232];
 } __attribute__((packed)) xcfs_entry_t;
 
 typedef struct {
