@@ -105,7 +105,7 @@ void vmm_map_page_in(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32
     uint32_t pd_index = virt >> 22;
     uint32_t pde = dir->entries[pd_index];
     page_table_t *table;
-    if (!(pde & PAGE_PRESENT)) {
+    if (!(pde & PAGE_PRESENT) || (pde & 0x80)) {
         table = (page_table_t*)pmm_malloc(PAGE_SIZE);
         if (!table) return;
         memset(table, 0, PAGE_SIZE);
