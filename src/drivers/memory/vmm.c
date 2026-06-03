@@ -206,7 +206,10 @@ vm_space_t* vmm_create_space() {
     }
     memset(space->directory, 0, PAGE_SIZE);
     for (uint32_t i = 0; i < 1024; i++) {
-        space->directory->entries[i] = kernel_directory->entries[i];
+        uint32_t pde = kernel_directory->entries[i];
+        if (pde & PAGE_PRESENT)
+            pde |= PAGE_USER;
+        space->directory->entries[i] = pde;
     }
     space->virt_start = USER_HEAP_VIRT;
     space->virt_end = KERNEL_HEAP_VIRT;
