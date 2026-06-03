@@ -62,18 +62,20 @@ proc_t* proc_create_user(const char *name, void *code, uint32_t code_sz) {
         void *phys = pmm_malloc(0x1000);
         if (!phys) { vmm_destroy_space(p->vm); pmm_free(p->kstack); p->state = PS_FREE; return 0; }
         uint32_t dst = UCODE_BASE + i * 0x1000;
-        vmm_map_page(dst, (uint32_t)phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        vmm_map_page_in(p->vm->directory, dst, (uint32_t)phys,
+                        PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         uint32_t chunk = (i + 1) * 0x1000 > code_sz ? code_sz - i * 0x1000 : 0x1000;
-        memcpy((void*)dst, (uint8_t*)code + i * 0x1000, chunk);
+        memcpy((void*)phys, (uint8_t*)code + i * 0x1000, chunk);
     }
 
     void *ustk_phys = pmm_malloc(USTACK_SIZE);
     if (!ustk_phys) { vmm_destroy_space(p->vm); pmm_free(p->kstack); p->state = PS_FREE; return 0; }
     uint32_t ustk_base = USTACK_TOP - USTACK_SIZE;
     for (uint32_t i = 0; i < USTACK_SIZE / 0x1000; i++) {
-        vmm_map_page(ustk_base + i * 0x1000,
-                     (uint32_t)ustk_phys + i * 0x1000,
-                     PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        vmm_map_page_in(p->vm->directory,
+                        ustk_base + i * 0x1000,
+                        (uint32_t)ustk_phys + i * 0x1000,
+                        PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 
     p->ctx.eip    = UCODE_BASE;

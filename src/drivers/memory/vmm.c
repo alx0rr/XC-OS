@@ -99,6 +99,24 @@ void vmm_map_page(uint32_t virt, uint32_t phys, uint32_t flags) {
     table->entries[pt_index] = (phys & 0xFFFFF000) | (flags & 0xFFF) | PAGE_PRESENT;
     invlpg(virt);
 }
+
+void vmm_map_page_in(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t flags) {
+    if (!dir) return;
+    uint32_t pd_index = virt >> 22;
+    uint32_t pde = dir->entries[pd_index];
+    page_table_t *table;
+    if (!(pde & PAGE_PRESENT)) {
+        table = (page_table_t*)pmm_malloc(PAGE_SIZE);
+        if (!table) return;
+        memset(table, 0, PAGE_SIZE);
+        dir->entries[pd_index] = ((uint32_t)table & 0xFFFFF000)
+                                 | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+    } else {
+        table = (page_table_t*)(pde & 0xFFFFF000);
+    }
+    uint32_t pt_index = (virt >> 12) & 0x3FF;
+    table->entries[pt_index] = (phys & 0xFFFFF000) | (flags & 0xFFF) | PAGE_PRESENT;
+}
 void vmm_unmap_page(uint32_t virt) {
     if (!kernel_directory) return;
     page_table_t* table = vmm_get_page_table(kernel_directory, virt, 0);
@@ -187,7 +205,7 @@ vm_space_t* vmm_create_space() {
         return 0;
     }
     memset(space->directory, 0, PAGE_SIZE);
-    for (uint32_t i = 768; i < 1024; i++) {
+    for (uint32_t i = 0; i < 1024; i++) {
         space->directory->entries[i] = kernel_directory->entries[i];
     }
     space->virt_start = USER_HEAP_VIRT;

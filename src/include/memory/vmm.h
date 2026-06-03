@@ -25,6 +25,7 @@ typedef struct {
 void vmm_init();
 void vmm_enable_paging();
 void vmm_map_page(uint32_t virt, uint32_t phys, uint32_t flags);
+void vmm_map_page_in(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t flags);
 void vmm_unmap_page(uint32_t virt);
 uint32_t vmm_get_physical(uint32_t virt);
 void* vmm_alloc_pages(uint32_t count, uint32_t flags);
