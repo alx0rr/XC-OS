@@ -685,3 +685,32 @@ void cmd_help(void) {
     printf("  {FG(255,255,0)}hb{FG(255,255,255)}        - Play Happy Birthday\n");
     printf("\n");
 }
+
+#include "../include/proc/proc.h"
+#include "../include/scheduler/sched.h"
+
+static uint8_t r3_prog[] = {
+    0xB8, 0x01, 0x00, 0x00, 0x00,
+    0xBB, 0x01, 0x00, 0x00, 0x00,
+    0xB9, 0x24, 0x00, 0x00, 0x08,
+    0xBA, 0x0E, 0x00, 0x00, 0x00,
+    0xCD, 0x80,
+    0xB8, 0x00, 0x00, 0x00, 0x00,
+    0xBB, 0x00, 0x00, 0x00, 0x00,
+    0xCD, 0x80,
+    0xEB, 0xFE,
+    'H','e','l','l','o',' ','R','i','n','g',' ','3','!','\n'
+};
+
+void cmd_ring3test(void) {
+    printf("{FG(255,255,0)}Launching ring3 test process...\n");
+    proc_t *p = proc_create_user("r3test", r3_prog, sizeof(r3_prog));
+    if (!p) {
+        printf("{FG(255,0,0)}proc_create_user failed\n");
+        return;
+    }
+    sched_add(p);
+    printf("{FG(0,255,0)}PID %u launched, sleeping 300ms...\n", p->pid);
+    task_sleep(300);
+    printf("{FG(0,255,0)}Back in kernel shell.\n");
+}
