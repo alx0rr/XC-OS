@@ -39,7 +39,7 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} ATA Driver initialized\n");
     xcfs_init(0);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS File System initialized\n");
-    printf("Алабуга политех");
+    printf("Кириллица OK");
     printf("\n");
     pcspk_play_note(1000, 50);
 }
