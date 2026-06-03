@@ -223,11 +223,22 @@ static void bsod(registers_t *regs) {
     while(1) {}
 }
 
+static void (*syscall_cb)(registers_t*) = 0;
+static void (*sched_tick_cb)(registers_t*) = 0;
+
+void idt_register_syscall_handler(void (*h)(registers_t*)) { syscall_cb = h; }
+void idt_register_sched_tick(void (*h)(registers_t*))      { sched_tick_cb = h; }
+
 void isr_handler(registers_t *regs) {
+    if (regs->int_no == 0x80) {
+        if (syscall_cb) syscall_cb(regs);
+        return;
+    }
     if (regs->int_no < 32) {
         bsod(regs);
     } else if (regs->int_no >= 32 && regs->int_no < 48) {
         uint8_t irq_no = regs->int_no - 32;
+        if (irq_no == 0 && sched_tick_cb) sched_tick_cb(regs);
         if (irq_handlers[irq_no]) {
             irq_handlers[irq_no](regs);
         }
@@ -236,4 +247,8 @@ void isr_handler(registers_t *regs) {
         }
         outb(0x20, 0x20);
     }
+}
+
+void idt_set_gate_dpl3(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flags) {
+    idt_set_gate(n, handler, sel, flags);
 }

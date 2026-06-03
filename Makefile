@@ -45,6 +45,9 @@ DRV_OBJS := $(BUILD)/vbe.o $(BUILD)/framebuffer.o $(BUILD)/text.o \
             $(BUILD)/pit.o $(BUILD)/pcspk.o $(BUILD)/xcfs.o
 
 KERN_OBJS := $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/idt.o \
+             $(BUILD)/gdt.o $(BUILD)/gdt_asm.o \
+             $(BUILD)/syscall.o $(BUILD)/syscall_asm.o \
+             $(BUILD)/proc.o $(BUILD)/sched.o \
              $(BUILD)/editor.o $(BUILD)/shell.o $(BUILD)/kernel.o
 
 ALL_OBJS  := $(KERN_OBJS) $(DRV_OBJS) $(LIB_OBJS)
@@ -108,6 +111,24 @@ build: $(CFG)
 	@gcc $(CFLAGS) -c $(KERNEL)/interrupts/idt.c -o $(BUILD)/idt.o \
 	 || { echo -e "$(RED)✗$(RESET) Failed: idt.c" >&2; exit 1; }
 
+	@$(call step,"Compiling GDT/TSS...")
+	@nasm $(NASM_ELF) $(KERNEL)/gdt/gdt.asm -o $(BUILD)/gdt_asm.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: gdt.asm" >&2; exit 1; }
+	@gcc $(CFLAGS) -c $(KERNEL)/gdt/gdt.c -o $(BUILD)/gdt.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: gdt.c" >&2; exit 1; }
+
+	@$(call step,"Compiling syscall...")
+	@nasm $(NASM_ELF) $(KERNEL)/syscall/syscall.asm -o $(BUILD)/syscall_asm.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: syscall.asm" >&2; exit 1; }
+	@gcc $(CFLAGS) -c $(KERNEL)/syscall/syscall.c -o $(BUILD)/syscall.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: syscall.c" >&2; exit 1; }
+
+	@$(call step,"Compiling proc/sched...")
+	@gcc $(CFLAGS) -c $(KERNEL)/proc/proc.c -o $(BUILD)/proc.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: proc.c" >&2; exit 1; }
+	@gcc $(CFLAGS) -c $(KERNEL)/scheduler/sched.c -o $(BUILD)/sched.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: sched.c" >&2; exit 1; }
+
 	@$(call step,"Compiling kernel...")
 	@gcc $(CFLAGS) -c $(KERNEL)/editor.c  -o $(BUILD)/editor.o  || { echo -e "$(RED)✗$(RESET) Failed: editor.c"  >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(KERNEL)/shell.c   -o $(BUILD)/shell.o   || { echo -e "$(RED)✗$(RESET) Failed: shell.c"   >&2; exit 1; }
@@ -117,6 +138,9 @@ build: $(CFG)
 	@ld -m elf_i386 -T $(SRC)/linker.ld -o $(BUILD)/kernel.bin \
 	    --start-group \
 	    $(BUILD)/boot.o       $(BUILD)/kernel.o      $(BUILD)/idt.o      $(BUILD)/isr.o  \
+	    $(BUILD)/gdt.o        $(BUILD)/gdt_asm.o                                         \
+	    $(BUILD)/syscall.o    $(BUILD)/syscall_asm.o                                     \
+	    $(BUILD)/proc.o       $(BUILD)/sched.o                                           \
 	    $(BUILD)/vbe.o        $(BUILD)/framebuffer.o $(BUILD)/text.o                     \
 	    $(BUILD)/pmm.o        $(BUILD)/vmm.o                                             \
 	    $(BUILD)/string.o     $(BUILD)/time.o        $(BUILD)/random.o                   \

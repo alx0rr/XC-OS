@@ -10,9 +10,10 @@
 #include "../include/timer/pit.h"
 #include "../include/sound/pcspk.h"
 #include "../include/graphics/framebuffer.h"
+#include "../include/gdt/gdt.h"
+#include "../include/syscall/syscall.h"
+#include "../include/scheduler/sched.h"
 #include "../lib/types.h"
-
-#define IP(a,b,c,d) (((u32)(a)<<24)|((u32)(b)<<16)|((u32)(c)<<8)|(d))
 
 void startup() {
     vbe_init();
@@ -24,6 +25,8 @@ void startup() {
     vmm_init();
     vmm_enable_paging();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Virtual Memory Manager initialized\n");
+    gdt_init();
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} GDT/TSS initialized\n");
     cpu_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} CPU detected\n");
     pic_init();
@@ -32,6 +35,12 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} IDT initialized\n");
     pit_init(1000);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIT initialized\n");
+    syscall_init();
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Syscall (int 0x80) initialized\n");
+    sched_init();
+    idt_register_syscall_handler(syscall_handler);
+    idt_register_sched_tick(sched_tick);
+    printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Scheduler initialized\n");
     pcspk_init();
     keyboard_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Keyboard initialized\n");

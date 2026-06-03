@@ -46,4 +46,7 @@ void idt_init();
 void pic_init();
 void idt_register_exception_handler(uint8_t int_no, void (*handler)(registers_t));
 void idt_register_irq_handler(uint8_t irq_no, void (*handler)(registers_t*));
+void idt_set_gate_dpl3(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flags);
+void idt_register_syscall_handler(void (*handler)(registers_t*));
+void idt_register_sched_tick(void (*handler)(registers_t*));
 #endif
