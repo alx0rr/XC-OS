@@ -13,6 +13,8 @@
 #define SYS_MUNMAP  7
 #define SYS_OPEN    8
 #define SYS_CLOSE   9
+#define SYS_BRK     10
+#define SYS_EXEC    11
 
 #define SYSCALL_INT  0x80
 #define SYSCALL_MAX  16

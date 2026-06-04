@@ -2,6 +2,7 @@
 #include "../include/shell.h"
 #include "startup.c"
 #include "cmd.c"
+#include "elf.c"
 
 void kernel_main(void) {
     startup();

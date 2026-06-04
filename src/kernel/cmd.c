@@ -11,6 +11,8 @@
 #include "../include/graphics/framebuffer.h"
 #include "../include/timer/pit.h"
 #include "../include/sound/pcspk.h"
+#include "../include/elf.h"
+#include "../include/scheduler/sched.h"
 #include "../lib/string.h"
 #include "../lib/time.h"
 #include "../lib/io.h"
@@ -712,4 +714,42 @@ void cmd_ring3test(void) {
     p->priority = PROC_PRIORITY_NORMAL;
     sched_add(p);
     printf("{FG(0,255,0)}PID %u queued. Output will appear on next tick.\n", p->pid);
+}
+
+void cmd_exec(int argc, char **argv) {
+    if (argc < 1) {
+        printf("{FG(255,0,0)}Usage: exec <path>\n");
+        return;
+    }
+    xcfs_dirent_t info;
+    if (xcfs_stat(argv[0], &info) < 0) {
+        printf("{FG(255,0,0)}exec: %s: not found\n", argv[0]);
+        return;
+    }
+    if (info.size > 4 * 1024 * 1024) {
+        printf("{FG(255,0,0)}exec: file too large\n");
+        return;
+    }
+    uint8_t *buf = (uint8_t *)pmm_malloc(info.size);
+    if (!buf) {
+        printf("{FG(255,0,0)}exec: out of memory\n");
+        return;
+    }
+    if (xcfs_read(argv[0], buf, info.size) < 0) {
+        pmm_free(buf);
+        printf("{FG(255,0,0)}exec: read error\n");
+        return;
+    }
+    const char *nm = argv[0];
+    for (int i = 0; argv[0][i]; i++)
+        if (argv[0][i] == '/') nm = argv[0] + i + 1;
+    proc_t *p = elf_load(nm, buf, info.size);
+    pmm_free(buf);
+    if (!p) {
+        printf("{FG(255,0,0)}exec: failed to load ELF\n");
+        return;
+    }
+    p->priority = PROC_PRIORITY_NORMAL;
+    sched_add(p);
+    printf("{FG(0,255,0)}exec: PID %u started\n", p->pid);
 }

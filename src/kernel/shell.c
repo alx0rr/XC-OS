@@ -48,6 +48,7 @@ extern void cmd_banner(int, char**);
 extern void cmd_beep(int, char**);
 extern void cmd_hb(void);
 extern void cmd_ring3test(void);
+extern void cmd_exec(int, char**);
 extern void poweroff();
 extern volatile uint8_t ctrl_pressed;
 
@@ -134,6 +135,7 @@ void shell_run(void) {
         else if (strcmp(cmd, "beep")      == 0) cmd_beep(argc, args);
         else if (strcmp(cmd, "hb")        == 0) cmd_hb();
         else if (strcmp(cmd, "ring3test") == 0) cmd_ring3test();
+        else if (strcmp(cmd, "exec")      == 0) cmd_exec(argc, args);
         else if (strcmp(cmd, "poweroff")  == 0) poweroff();
         else if (strcmp(cmd, "reboot")    == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");

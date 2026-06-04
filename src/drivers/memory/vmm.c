@@ -214,8 +214,9 @@ vm_space_t* vmm_create_space() {
         space->directory->entries[i] = pde;
     }
     space->virt_start = USER_HEAP_VIRT;
-    space->virt_end = KERNEL_HEAP_VIRT;
-    space->flags = PAGE_USER | PAGE_WRITE;
+    space->virt_end   = KERNEL_HEAP_VIRT;
+    space->heap_brk   = USER_HEAP_VIRT;
+    space->flags      = PAGE_USER | PAGE_WRITE;
     return space;
 }
 void vmm_destroy_space(vm_space_t* space) {

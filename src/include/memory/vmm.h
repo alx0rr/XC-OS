@@ -20,6 +20,7 @@ typedef struct {
     page_directory_t* directory;
     uint32_t virt_start;
     uint32_t virt_end;
+    uint32_t heap_brk;
     uint32_t flags;
 } vm_space_t;
 void vmm_init();

@@ -144,6 +144,25 @@ static uint32_t sys_munmap(uint32_t addr, uint32_t len, uint32_t a, uint32_t b, 
     return 0;
 }
 
+static uint32_t sys_brk(uint32_t addr, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    (void)a; (void)b; (void)c; (void)d;
+    proc_t *p = sched_current();
+    if (!p || !p->vm) return (uint32_t)-1;
+    if (addr == 0) return p->vm->heap_brk;
+    if (addr < p->vm->heap_brk) return (uint32_t)-1;
+    if (addr >= 0xC0000000U)    return (uint32_t)-1;
+    uint32_t cur_pg = (p->vm->heap_brk + 0xFFFU) & ~0xFFFU;
+    uint32_t new_pg = (addr + 0xFFFU) & ~0xFFFU;
+    for (uint32_t v = cur_pg; v < new_pg; v += 0x1000) {
+        void *phys = pmm_malloc(0x1000);
+        if (!phys) return (uint32_t)-1;
+        vmm_map_page_in(p->vm->directory, v, (uint32_t)phys,
+                        PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+    }
+    p->vm->heap_brk = addr;
+    return addr;
+}
+
 static uint32_t sys_open(uint32_t path_ptr, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     (void)a; (void)b; (void)c; (void)d;
     if (!uptr_ok(path_ptr, 1)) return (uint32_t)-1;
@@ -209,6 +228,7 @@ void syscall_init() {
     tbl[SYS_MUNMAP] = sys_munmap;
     tbl[SYS_OPEN]   = sys_open;
     tbl[SYS_CLOSE]  = sys_close;
+    tbl[SYS_BRK]    = sys_brk;
 
     idt_set_gate_dpl3(SYSCALL_INT, (uint32_t)syscall_stub_asm, 0x08,
                       0x80 | 0x60 | 0x0F);
