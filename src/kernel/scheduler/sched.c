@@ -10,14 +10,20 @@
 static proc_t *queue[PROC_MAX];
 static int     q_head, q_tail, q_cnt;
 static proc_t *cur;
+static proc_t *idle;
 static uint32_t ticks_ms;
-
-extern void sched_ctx_switch(cpu_ctx_t *old, cpu_ctx_t *next, uint32_t pd);
+static volatile uint8_t need_resched;
 
 void sched_init() {
     q_head = q_tail = q_cnt = 0;
     cur = 0;
+    idle = 0;
     ticks_ms = 0;
+    need_resched = 0;
+}
+
+void sched_set_idle(proc_t *p) {
+    idle = p;
 }
 
 void sched_add(proc_t *p) {
@@ -62,8 +68,8 @@ static void switch_to(proc_t *nxt, registers_t *regs) {
         cur->ctx.edx    = regs->edx;
         cur->ctx.esi    = regs->esi;
         cur->ctx.edi    = regs->edi;
-        cur->state = PS_READY;
-        sched_add(cur);
+        if (cur != idle)
+            cur->state = PS_READY;
     }
 
     cur = nxt;
@@ -71,9 +77,10 @@ static void switch_to(proc_t *nxt, registers_t *regs) {
 
     tss_set_kernel_stack(cur->kstack_top);
 
-    if (cur->vm) {
+    if (cur->vm)
         vmm_switch_space(cur->vm);
-    }
+    else
+        vmm_flush_tlb();
 
     regs->eip    = cur->ctx.eip;
     regs->eflags = cur->ctx.eflags | 0x200;
@@ -110,39 +117,53 @@ void sched_tick(registers_t *regs) {
         }
     }
 
-    if (!cur) {
+    if (!cur || cur == idle) {
         proc_t *n = next_ready();
-        if (n) switch_to(n, regs);
+        if (n) {
+            switch_to(n, regs);
+            return;
+        }
+        if (!cur && idle) {
+            switch_to(idle, regs);
+        }
         return;
     }
 
     cur->ticks++;
-    if (cur->ticks >= TIME_SLICE) {
+    if (cur->ticks >= TIME_SLICE || need_resched) {
+        need_resched = 0;
         cur->ticks = 0;
         proc_t *n = next_ready();
-        if (n) switch_to(n, regs);
+        if (n)
+            switch_to(n, regs);
+        else if (idle)
+            switch_to(idle, regs);
     }
 }
 
-proc_t* sched_current() { return cur; }
+proc_t* sched_current()    { return cur; }
 uint32_t sched_current_pid() { return cur ? cur->pid : 0; }
 
 void task_yield() {
-    asm volatile("int $0x80" : : "a"(3) : "memory");
+    need_resched = 1;
+    asm volatile("int $0x20");
 }
 
 void task_sleep(uint32_t ms) {
-    if (!cur) return;
-    cur->ticks = ms;
-    cur->state = PS_BLOCKED;
-    task_yield();
+    if (!cur || cur == idle) return;
+    cur->ticks  = ms;
+    cur->state  = PS_BLOCKED;
+    need_resched = 1;
+    asm volatile("int $0x20");
 }
 
 void task_exit_by_code(uint32_t code) {
     if (!cur) return;
     cur->exit_code = code;
-    cur->state = PS_ZOMBIE;
+    cur->state     = PS_ZOMBIE;
     sched_remove(cur->pid);
+    proc_free(cur);
     cur = 0;
+    need_resched = 1;
     asm volatile("int $0x20");
 }

@@ -710,7 +710,5 @@ void cmd_ring3test(void) {
         return;
     }
     sched_add(p);
-    printf("{FG(0,255,0)}PID %u launched, sleeping 300ms...\n", p->pid);
-    task_sleep(300);
-    printf("{FG(0,255,0)}Back in kernel shell.\n");
+    printf("{FG(0,255,0)}PID %u queued. Output will appear on next tick.\n", p->pid);
 }

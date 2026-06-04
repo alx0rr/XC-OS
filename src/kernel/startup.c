@@ -13,7 +13,12 @@
 #include "../include/gdt/gdt.h"
 #include "../include/syscall/syscall.h"
 #include "../include/scheduler/sched.h"
+#include "../include/proc/proc.h"
 #include "../lib/types.h"
+
+static void idle_fn() {
+    while (1) asm volatile("hlt");
+}
 
 void startup() {
     vbe_init();
@@ -40,6 +45,8 @@ void startup() {
     sched_init();
     idt_register_syscall_handler(syscall_handler);
     idt_register_sched_tick(sched_tick);
+    proc_t *idlep = proc_create_kernel("idle", idle_fn);
+    if (idlep) sched_set_idle(idlep);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} Scheduler initialized\n");
     pcspk_init();
     keyboard_init();

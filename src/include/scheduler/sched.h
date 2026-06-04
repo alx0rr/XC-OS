@@ -6,6 +6,7 @@
 
 void sched_init();
 void sched_add(proc_t *p);
+void sched_set_idle(proc_t *p);
 void sched_remove(uint32_t pid);
 void sched_tick(registers_t *regs);
 

@@ -1,7 +1,7 @@
 .PHONY: clean build qemu help push push-release fetch git-list rollback
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-BRANCH ?= main
+BRANCH ?= heads/test
 MSG    ?=
 TARGET ?=
 
