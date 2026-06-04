@@ -31,7 +31,7 @@ static page_table_t* vmm_get_page_table(page_directory_t* dir, uint32_t virt, ui
         if (!create) return 0;
         void* table_phys = pmm_malloc(PAGE_SIZE);
         if (!table_phys) return 0;
-        dir->entries[pd_index] = ((uint32_t)table_phys & 0xFFFFF000) | PAGE_PRESENT | PAGE_WRITE;
+        dir->entries[pd_index] = ((uint32_t)table_phys & 0xFFFFF000) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
         page_table_t* table = (page_table_t*)table_phys;
         memset(table, 0, PAGE_SIZE);
         return table;

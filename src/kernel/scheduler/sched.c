@@ -120,9 +120,12 @@ void sched_tick(registers_t *regs) {
     if (cur->state == PS_ZOMBIE || need_resched) {
         need_resched = 0;
         cur->ticks = 0;
+        proc_t *dying = (cur->state == PS_ZOMBIE) ? cur : 0;
         if (n) switch_to(n, regs);
-        else {
-            cur = 0;
+        else cur = 0;
+        if (dying) {
+            sched_remove(dying->pid);
+            proc_free(dying);
         }
         return;
     }
@@ -154,8 +157,5 @@ void task_exit_by_code(uint32_t code) {
     if (!cur) return;
     cur->exit_code = code;
     cur->state     = PS_ZOMBIE;
-    sched_remove(cur->pid);
-    proc_free(cur);
-    cur = 0;
-    need_resched = 1;
+    need_resched   = 1;
 }

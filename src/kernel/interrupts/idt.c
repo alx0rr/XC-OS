@@ -235,6 +235,11 @@ void isr_handler(registers_t *regs) {
         return;
     }
     if (regs->int_no < 32) {
+        if (regs->cs == 0x1B) {
+            extern void task_exit_by_code(uint32_t);
+            task_exit_by_code(128 + regs->int_no);
+            return;
+        }
         bsod(regs);
     } else if (regs->int_no >= 32 && regs->int_no < 48) {
         uint8_t irq_no = regs->int_no - 32;
