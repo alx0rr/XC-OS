@@ -5,7 +5,9 @@
 #include "../../include/interrupts/idt.h"
 #include "../../lib/string.h"
 
-#define TIME_SLICE 20
+#define TIME_SLICE_HIGH   10
+#define TIME_SLICE_NORMAL 20
+#define TIME_SLICE_LOW    40
 
 static proc_t *queue[PROC_MAX];
 static int     q_head, q_tail, q_cnt;
@@ -37,15 +39,23 @@ void sched_remove(uint32_t pid) {
 }
 
 static proc_t* next_ready() {
-    for (int i = 0; i < q_cnt; i++) {
-        int idx = (q_head + i) % PROC_MAX;
-        proc_t *p = queue[idx];
-        if (p && p->state == PS_READY) {
-            q_head = (idx + 1) % PROC_MAX;
-            return p;
+    for (uint8_t prio = PROC_PRIORITY_HIGH; prio <= PROC_PRIORITY_LOW; prio++) {
+        for (int i = 0; i < q_cnt; i++) {
+            int idx = (q_head + i) % PROC_MAX;
+            proc_t *p = queue[idx];
+            if (p && p->state == PS_READY && p->priority == prio) {
+                q_head = (idx + 1) % PROC_MAX;
+                return p;
+            }
         }
     }
     return 0;
+}
+
+static uint32_t time_slice_for(proc_t *p) {
+    if (p->priority == PROC_PRIORITY_HIGH)   return TIME_SLICE_HIGH;
+    if (p->priority == PROC_PRIORITY_LOW)    return TIME_SLICE_LOW;
+    return TIME_SLICE_NORMAL;
 }
 
 static void switch_to(proc_t *nxt, registers_t *regs) {
@@ -121,8 +131,12 @@ void sched_tick(registers_t *regs) {
         need_resched = 0;
         cur->ticks = 0;
         proc_t *dying = (cur->state == PS_ZOMBIE) ? cur : 0;
-        if (n) switch_to(n, regs);
-        else cur = 0;
+        if (n) {
+            switch_to(n, regs);
+        } else {
+            if (cur->vm) vmm_flush_tlb();
+            cur = 0;
+        }
         if (dying) {
             sched_remove(dying->pid);
             proc_free(dying);
@@ -131,9 +145,10 @@ void sched_tick(registers_t *regs) {
     }
 
     cur->ticks++;
-    if (cur->ticks >= TIME_SLICE) {
+    if (cur->ticks >= time_slice_for(cur)) {
         cur->ticks = 0;
-        if (n) switch_to(n, regs);
+        if (n && (n->priority <= cur->priority || cur->ticks == 0))
+            switch_to(n, regs);
     }
 }
 

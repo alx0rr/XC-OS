@@ -10,6 +10,10 @@
 #define USTACK_TOP      0xBFFFF000
 #define UCODE_BASE      0x08000000
 
+#define PROC_PRIORITY_HIGH   0
+#define PROC_PRIORITY_NORMAL 1
+#define PROC_PRIORITY_LOW    2
+
 typedef enum {
     PS_FREE = 0,
     PS_READY,
@@ -39,6 +43,7 @@ typedef struct proc {
 
     uint32_t     ticks;
     uint32_t     exit_code;
+    uint8_t      priority;
 
     struct proc *next;
 } proc_t;

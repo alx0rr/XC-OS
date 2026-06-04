@@ -709,6 +709,7 @@ void cmd_ring3test(void) {
         printf("{FG(255,0,0)}proc_create_user failed\n");
         return;
     }
+    p->priority = PROC_PRIORITY_NORMAL;
     sched_add(p);
     printf("{FG(0,255,0)}PID %u queued. Output will appear on next tick.\n", p->pid);
 }

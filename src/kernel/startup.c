@@ -16,6 +16,15 @@
 #include "../include/proc/proc.h"
 #include "../lib/types.h"
 
+extern void shell_run(void);
+
+static void shell_proc_entry(void) {
+    printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS :3{FG(0,255,0)}\n");
+    printf("\nType '{FG(255,255,0)}help{FG(255,255,255)}' for available commands\n\n");
+    shell_run();
+    task_exit_by_code(0);
+}
+
 void startup() {
     vbe_init();
     text_init();
@@ -50,4 +59,10 @@ void startup() {
     xcfs_init(0);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} XCFS File System initialized\n");
     pcspk_play_note(1000, 50);
+
+    proc_t *shell = proc_create_kernel("shell", shell_proc_entry);
+    if (shell) {
+        shell->priority = PROC_PRIORITY_HIGH;
+        sched_add(shell);
+    }
 }
