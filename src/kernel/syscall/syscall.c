@@ -1,5 +1,6 @@
 #include "../../include/syscall/syscall.h"
 #include "../../include/interrupts/idt.h"
+#include "../../include/scheduler/sched.h"
 #include "../../include/text.h"
 
 static syscall_fn_t tbl[SYSCALL_MAX];

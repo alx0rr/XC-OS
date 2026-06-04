@@ -4,8 +4,8 @@ extern syscall_handler
 global syscall_stub_asm
 syscall_stub_asm:
     cli
-    push byte 0
-    push byte 0x80
+    push dword 0
+    push dword 0x80
     pusha
     mov ax, ds
     push eax

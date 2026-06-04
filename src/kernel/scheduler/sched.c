@@ -98,10 +98,6 @@ static void switch_to(proc_t *nxt, registers_t *regs) {
     }
 }
 
-void sched_idle_loop() {
-    while (1) asm volatile("hlt");
-}
-
 void sched_tick(registers_t *regs) {
     ticks_ms++;
 
@@ -117,15 +113,7 @@ void sched_tick(registers_t *regs) {
     proc_t *n = next_ready();
 
     if (!cur) {
-        if (n) {
-            switch_to(n, regs);
-        } else {
-            regs->eip    = (uint32_t)sched_idle_loop;
-            regs->cs     = KCODE_SEL;
-            regs->ss     = KDATA_SEL;
-            regs->ds     = KDATA_SEL;
-            regs->eflags = 0x202;
-        }
+        if (n) switch_to(n, regs);
         return;
     }
 
