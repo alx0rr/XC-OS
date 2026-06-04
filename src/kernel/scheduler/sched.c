@@ -134,12 +134,12 @@ void sched_tick(registers_t *regs) {
     }
 }
 
-proc_t* sched_current()    { return cur; }
+proc_t* sched_current()      { return cur; }
 uint32_t sched_current_pid() { return cur ? cur->pid : 0; }
+uint8_t sched_need_resched() { return need_resched; }
 
 void task_yield() {
     need_resched = 1;
-    asm volatile("int $0x20");
 }
 
 void task_sleep(uint32_t ms) {
@@ -147,7 +147,6 @@ void task_sleep(uint32_t ms) {
     cur->ticks  = ms;
     cur->state  = PS_BLOCKED;
     need_resched = 1;
-    asm volatile("int $0x20");
 }
 
 void task_exit_by_code(uint32_t code) {
@@ -158,5 +157,4 @@ void task_exit_by_code(uint32_t code) {
     proc_free(cur);
     cur = 0;
     need_resched = 1;
-    asm volatile("int $0x20");
 }

@@ -55,6 +55,9 @@ void syscall_handler(registers_t *regs) {
         return;
     }
     regs->eax = tbl[n](regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi);
+    extern uint8_t sched_need_resched();
+    extern void sched_tick(registers_t*);
+    if (sched_need_resched()) sched_tick(regs);
 }
 
 void syscall_init() {

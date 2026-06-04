@@ -11,6 +11,7 @@ void sched_tick(registers_t *regs);
 
 proc_t*  sched_current();
 uint32_t sched_current_pid();
+uint8_t  sched_need_resched();
 
 void task_yield();
 void task_sleep(uint32_t ms);
