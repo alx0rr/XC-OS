@@ -8,8 +8,8 @@ extern void syscall_stub();
 
 static uint32_t sys_exit(uint32_t code, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     (void)a; (void)b; (void)c; (void)d;
-    extern void task_exit_by_code(uint32_t);
     task_exit_by_code(code);
+    while (1) asm volatile("hlt");
     return 0;
 }
 
@@ -55,13 +55,6 @@ void syscall_handler(registers_t *regs) {
         return;
     }
     regs->eax = tbl[n](regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi);
-    extern uint8_t sched_need_resched();
-    extern void sched_resched_clear();
-    extern void sched_tick(registers_t*);
-    if (sched_need_resched()) {
-        sched_resched_clear();
-        sched_tick(regs);
-    }
 }
 
 void syscall_init() {
