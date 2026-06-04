@@ -10,20 +10,14 @@
 static proc_t *queue[PROC_MAX];
 static int     q_head, q_tail, q_cnt;
 static proc_t *cur;
-static proc_t *idle;
 static uint32_t ticks_ms;
 static volatile uint8_t need_resched;
 
 void sched_init() {
     q_head = q_tail = q_cnt = 0;
     cur = 0;
-    idle = 0;
     ticks_ms = 0;
     need_resched = 0;
-}
-
-void sched_set_idle(proc_t *p) {
-    idle = p;
 }
 
 void sched_add(proc_t *p) {
@@ -68,8 +62,7 @@ static void switch_to(proc_t *nxt, registers_t *regs) {
         cur->ctx.edx    = regs->edx;
         cur->ctx.esi    = regs->esi;
         cur->ctx.edi    = regs->edi;
-        if (cur != idle)
-            cur->state = PS_READY;
+        cur->state = PS_READY;
     }
 
     cur = nxt;
@@ -117,27 +110,27 @@ void sched_tick(registers_t *regs) {
         }
     }
 
-    if (!cur || cur == idle) {
-        proc_t *n = next_ready();
-        if (n) {
-            switch_to(n, regs);
-            return;
-        }
-        if (!cur && idle) {
-            switch_to(idle, regs);
+    proc_t *n = next_ready();
+
+    if (!cur) {
+        if (n) switch_to(n, regs);
+        return;
+    }
+
+    if (cur->state == PS_ZOMBIE || need_resched) {
+        need_resched = 0;
+        cur->ticks = 0;
+        if (n) switch_to(n, regs);
+        else {
+            cur = 0;
         }
         return;
     }
 
     cur->ticks++;
-    if (cur->ticks >= TIME_SLICE || need_resched) {
-        need_resched = 0;
+    if (cur->ticks >= TIME_SLICE) {
         cur->ticks = 0;
-        proc_t *n = next_ready();
-        if (n)
-            switch_to(n, regs);
-        else if (idle)
-            switch_to(idle, regs);
+        if (n) switch_to(n, regs);
     }
 }
 
@@ -150,7 +143,7 @@ void task_yield() {
 }
 
 void task_sleep(uint32_t ms) {
-    if (!cur || cur == idle) return;
+    if (!cur) return;
     cur->ticks  = ms;
     cur->state  = PS_BLOCKED;
     need_resched = 1;
