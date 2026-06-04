@@ -136,7 +136,7 @@ void sched_tick(registers_t *regs) {
         if (n) {
             switch_to(n, regs);
         } else {
-            if (cur->vm) vmm_flush_tlb();
+            vmm_switch_kernel();
             cur = 0;
         }
         if (dying) {

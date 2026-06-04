@@ -241,6 +241,10 @@ void vmm_switch_space(vm_space_t* space) {
     current_directory = space->directory;
     load_page_directory((uint32_t)space->directory);
 }
+void vmm_switch_kernel() {
+    current_directory = kernel_directory;
+    load_page_directory((uint32_t)kernel_directory);
+}
 void vmm_print_stats() {
     printf("VMM Stats:\n");
     printf("  Mapped pages: %u (%uMB)\n",

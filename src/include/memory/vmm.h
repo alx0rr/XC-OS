@@ -33,6 +33,7 @@ void vmm_free_pages(void* virt, uint32_t count);
 vm_space_t* vmm_create_space();
 void vmm_destroy_space(vm_space_t* space);
 void vmm_switch_space(vm_space_t* space);
+void vmm_switch_kernel();
 void vmm_print_stats();
 void vmm_flush_tlb();
 void vmm_flush_page(uint32_t virt);

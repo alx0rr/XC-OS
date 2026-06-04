@@ -12,6 +12,12 @@ static syscall_fn_t tbl[SYSCALL_MAX];
 
 extern void syscall_stub_asm(void);
 
+#define USER_VIRT_MIN 0x00001000U
+#define USER_VIRT_MAX 0xC0000000U
+#define uptr_ok(p, n) ((uint32_t)(p) >= USER_VIRT_MIN && \
+                       (uint32_t)(p) + (uint32_t)(n) <= USER_VIRT_MAX && \
+                       (uint32_t)(p) + (uint32_t)(n) >= (uint32_t)(p))
+
 #define SYS_OPEN_MAX 16
 
 typedef struct {
@@ -34,6 +40,7 @@ static uint32_t sys_exit(uint32_t code, uint32_t a, uint32_t b, uint32_t c, uint
 static uint32_t sys_write(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, uint32_t b) {
     (void)a; (void)b;
     if (fd != 1 && fd != 2) return (uint32_t)-1;
+    if (!uptr_ok(buf, len)) return (uint32_t)-1;
     const char *s = (const char *)buf;
     for (uint32_t i = 0; i < len; i++) {
         char tmp[2] = {s[i], 0};
@@ -45,6 +52,7 @@ static uint32_t sys_write(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, u
 static uint32_t sys_read(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, uint32_t b) {
     (void)a; (void)b;
     if (fd == 0) {
+        if (!uptr_ok(buf, len)) return (uint32_t)-1;
         char *dst = (char *)buf;
         uint32_t i = 0;
         while (i < len) {
@@ -55,10 +63,27 @@ static uint32_t sys_read(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, ui
         return i;
     }
     if (fd < 3 || fd >= SYS_OPEN_MAX || !fdtable[fd].used) return (uint32_t)-1;
+    if (!uptr_ok(buf, len)) return (uint32_t)-1;
     sys_fd_t *f = &fdtable[fd];
     if (f->pos >= f->size) return 0;
     uint32_t avail = f->size - f->pos;
     uint32_t n = (len < avail) ? len : avail;
+    proc_t *cur = sched_current();
+    if (cur && cur->vm) {
+        uint32_t dst = buf & ~0xFFFU;
+        uint32_t end = (buf + n + 0xFFFU) & ~0xFFFU;
+        for (uint32_t v = dst; v < end; v += 0x1000) {
+            uint32_t pd = cur->vm->directory->entries[v >> 22];
+            if (pd & PAGE_PRESENT) {
+                page_table_t *pt = (page_table_t *)(pd & 0xFFFFF000U);
+                if (pt->entries[(v >> 12) & 0x3FF] & PAGE_PRESENT) continue;
+            }
+            void *pg = pmm_malloc(0x1000);
+            if (!pg) return (uint32_t)-1;
+            vmm_map_page_in(cur->vm->directory, v, (uint32_t)pg,
+                            PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        }
+    }
     memcpy((void *)buf, f->buf + f->pos, n);
     f->pos += n;
     return n;
@@ -128,6 +153,7 @@ static uint32_t sys_munmap(uint32_t addr, uint32_t len, uint32_t a, uint32_t b, 
 
 static uint32_t sys_open(uint32_t path_ptr, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     (void)a; (void)b; (void)c; (void)d;
+    if (!uptr_ok(path_ptr, 1)) return (uint32_t)-1;
     const char *path = (const char *)path_ptr;
     xcfs_dirent_t info;
     if (xcfs_stat(path, &info) != 0) return (uint32_t)-1;
