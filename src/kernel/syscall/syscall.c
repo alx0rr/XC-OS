@@ -4,9 +4,12 @@
 #include "../../include/memory/vmm.h"
 #include "../../include/memory/pmm.h"
 #include "../../include/fs/xcfs.h"
+#include "../../include/proc/proc.h"
 #include "../../include/text.h"
 #include "../../include/input/keyboard.h"
 #include "../../lib/string.h"
+
+#define SYS_FILE_MAX (512 * 1024)
 
 static syscall_fn_t tbl[SYSCALL_MAX];
 
@@ -18,17 +21,6 @@ extern void syscall_stub_asm(void);
                        (uint32_t)(p) + (uint32_t)(n) <= USER_VIRT_MAX && \
                        (uint32_t)(p) + (uint32_t)(n) >= (uint32_t)(p))
 
-#define SYS_OPEN_MAX 16
-
-typedef struct {
-    uint8_t  used;
-    char     path[XCFS_MAX_PATH];
-    uint32_t size;
-    uint32_t pos;
-    uint8_t *buf;
-} sys_fd_t;
-
-static sys_fd_t fdtable[SYS_OPEN_MAX];
 
 static uint32_t sys_exit(uint32_t code, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     (void)a; (void)b; (void)c; (void)d;
@@ -62,14 +54,15 @@ static uint32_t sys_read(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, ui
         }
         return i;
     }
-    if (fd < 3 || fd >= SYS_OPEN_MAX || !fdtable[fd].used) return (uint32_t)-1;
+    if (fd < 3 || fd >= PROC_FD_MAX) return (uint32_t)-1;
     if (!uptr_ok(buf, len)) return (uint32_t)-1;
-    sys_fd_t *f = &fdtable[fd];
+    proc_t *cur = sched_current();
+    if (!cur || !cur->fds[fd].used) return (uint32_t)-1;
+    proc_fd_t *f = &cur->fds[fd];
     if (f->pos >= f->size) return 0;
     uint32_t avail = f->size - f->pos;
     uint32_t n = (len < avail) ? len : avail;
-    proc_t *cur = sched_current();
-    if (cur && cur->vm) {
+    if (cur->vm) {
         uint32_t dst = buf & ~0xFFFU;
         uint32_t end = (buf + n + 0xFFFU) & ~0xFFFU;
         for (uint32_t v = dst; v < end; v += 0x1000) {
@@ -155,21 +148,24 @@ static uint32_t sys_open(uint32_t path_ptr, uint32_t a, uint32_t b, uint32_t c, 
     (void)a; (void)b; (void)c; (void)d;
     if (!uptr_ok(path_ptr, 1)) return (uint32_t)-1;
     const char *path = (const char *)path_ptr;
+    proc_t *p = sched_current();
+    if (!p) return (uint32_t)-1;
     xcfs_dirent_t info;
     if (xcfs_stat(path, &info) != 0) return (uint32_t)-1;
-    for (int i = 3; i < SYS_OPEN_MAX; i++) {
-        if (!fdtable[i].used) {
+    if (info.size > SYS_FILE_MAX) return (uint32_t)-1;
+    for (int i = 3; i < PROC_FD_MAX; i++) {
+        if (!p->fds[i].used) {
             uint8_t *fbuf = (uint8_t *)pmm_malloc(info.size + 1);
             if (!fbuf) return (uint32_t)-1;
             if (xcfs_read(path, fbuf, info.size) < 0) {
                 pmm_free(fbuf);
                 return (uint32_t)-1;
             }
-            fdtable[i].used = 1;
-            fdtable[i].size = info.size;
-            fdtable[i].pos  = 0;
-            fdtable[i].buf  = fbuf;
-            strncpy(fdtable[i].path, path, XCFS_MAX_PATH - 1);
+            p->fds[i].used = 1;
+            p->fds[i].size = info.size;
+            p->fds[i].pos  = 0;
+            p->fds[i].buf  = fbuf;
+            strncpy(p->fds[i].path, path, XCFS_MAX_PATH - 1);
             return (uint32_t)i;
         }
     }
@@ -178,10 +174,12 @@ static uint32_t sys_open(uint32_t path_ptr, uint32_t a, uint32_t b, uint32_t c, 
 
 static uint32_t sys_close(uint32_t fd, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     (void)a; (void)b; (void)c; (void)d;
-    if (fd < 3 || fd >= SYS_OPEN_MAX || !fdtable[fd].used) return (uint32_t)-1;
-    if (fdtable[fd].buf) pmm_free(fdtable[fd].buf);
-    fdtable[fd].used = 0;
-    fdtable[fd].buf  = 0;
+    if (fd < 3 || fd >= PROC_FD_MAX) return (uint32_t)-1;
+    proc_t *p = sched_current();
+    if (!p || !p->fds[fd].used) return (uint32_t)-1;
+    if (p->fds[fd].buf) pmm_free(p->fds[fd].buf);
+    p->fds[fd].used = 0;
+    p->fds[fd].buf  = 0;
     return 0;
 }
 
@@ -200,7 +198,6 @@ void syscall_handler(registers_t *regs) {
 
 void syscall_init() {
     for (int i = 0; i < SYSCALL_MAX; i++) tbl[i] = 0;
-    for (int i = 0; i < SYS_OPEN_MAX; i++) { fdtable[i].used = 0; fdtable[i].buf = 0; }
 
     tbl[SYS_EXIT]   = sys_exit;
     tbl[SYS_WRITE]  = sys_write;

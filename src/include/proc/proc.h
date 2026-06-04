@@ -2,9 +2,19 @@
 #define PROC_H
 #include <stdint.h>
 #include "../memory/vmm.h"
+#include "../fs/xcfs.h"
 
 #define PROC_MAX        32
 #define PROC_NAME_LEN   32
+#define PROC_FD_MAX 16
+
+typedef struct {
+    uint8_t  used;
+    uint32_t size;
+    uint32_t pos;
+    uint8_t *buf;
+    char     path[XCFS_MAX_PATH];
+} proc_fd_t;
 #define KSTACK_SIZE     8192
 #define USTACK_SIZE     8192
 #define USTACK_TOP      0xBFFFF000
@@ -46,6 +56,7 @@ typedef struct proc {
     uint8_t      priority;
 
     struct proc *next;
+    proc_fd_t    fds[PROC_FD_MAX];
 } proc_t;
 
 proc_t* proc_create_kernel(const char *name, void (*fn)());

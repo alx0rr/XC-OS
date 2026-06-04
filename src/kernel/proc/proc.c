@@ -68,13 +68,14 @@ proc_t* proc_create_user(const char *name, void *code, uint32_t code_sz) {
         memcpy((void*)phys, (uint8_t*)code + i * 0x1000, chunk);
     }
 
-    void *ustk_phys = pmm_malloc(USTACK_SIZE);
-    if (!ustk_phys) { vmm_destroy_space(p->vm); pmm_free(p->kstack); p->state = PS_FREE; return 0; }
-    uint32_t ustk_base = USTACK_TOP - USTACK_SIZE;
-    for (uint32_t i = 0; i < USTACK_SIZE / 0x1000; i++) {
+    uint32_t ustk_pages = (USTACK_SIZE + 0xFFF) >> 12;
+    uint32_t ustk_base  = USTACK_TOP - USTACK_SIZE;
+    for (uint32_t i = 0; i < ustk_pages; i++) {
+        void *pg = pmm_malloc(0x1000);
+        if (!pg) { vmm_destroy_space(p->vm); pmm_free(p->kstack); p->state = PS_FREE; return 0; }
         vmm_map_page_in(p->vm->directory,
                         ustk_base + i * 0x1000,
-                        (uint32_t)ustk_phys + i * 0x1000,
+                        (uint32_t)pg,
                         PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
     }
 

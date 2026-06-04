@@ -33,7 +33,12 @@ void sched_remove(uint32_t pid) {
     for (int i = 0; i < q_cnt; i++) {
         int idx = (q_head + i) % PROC_MAX;
         if (queue[idx] && queue[idx]->pid == pid) {
-            queue[idx] = 0;
+            for (int j = i; j < q_cnt - 1; j++) {
+                int cur_idx  = (q_head + j)     % PROC_MAX;
+                int next_idx = (q_head + j + 1) % PROC_MAX;
+                queue[cur_idx] = queue[next_idx];
+            }
+            queue[(q_head + q_cnt - 1) % PROC_MAX] = 0;
             q_cnt--;
             return;
         }
