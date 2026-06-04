@@ -103,14 +103,25 @@ static uint32_t sys_mmap(uint32_t addr, uint32_t len, uint32_t a, uint32_t b, ui
 static uint32_t sys_munmap(uint32_t addr, uint32_t len, uint32_t a, uint32_t b, uint32_t c) {
     (void)a; (void)b; (void)c;
     if (len == 0 || addr == 0) return (uint32_t)-1;
+    proc_t *cur_proc = sched_current();
+    page_directory_t *dir = (cur_proc && cur_proc->vm)
+                            ? cur_proc->vm->directory
+                            : 0;
+    if (!dir) return (uint32_t)-1;
     uint32_t pages = (len + 0xFFF) >> 12;
     for (uint32_t i = 0; i < pages; i++) {
         uint32_t virt = (addr & ~0xFFF) + i * 0x1000;
-        uint32_t phys = vmm_get_physical(virt);
-        if (phys) {
-            vmm_unmap_page(virt);
-            pmm_free((void *)(phys & 0xFFFFF000));
-        }
+        uint32_t pd_index = virt >> 22;
+        uint32_t pde = dir->entries[pd_index];
+        if (!(pde & PAGE_PRESENT) || (pde & 0x80)) continue;
+        page_table_t *table = (page_table_t *)(pde & 0xFFFFF000);
+        uint32_t pt_index = (virt >> 12) & 0x3FF;
+        uint32_t pte = table->entries[pt_index];
+        if (!(pte & PAGE_PRESENT)) continue;
+        uint32_t phys = pte & 0xFFFFF000;
+        table->entries[pt_index] = 0;
+        __asm__ volatile("invlpg (%0)" :: "r"(virt) : "memory");
+        pmm_free((void *)phys);
     }
     return 0;
 }

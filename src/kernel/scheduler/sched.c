@@ -34,6 +34,8 @@ void sched_remove(uint32_t pid) {
         int idx = (q_head + i) % PROC_MAX;
         if (queue[idx] && queue[idx]->pid == pid) {
             queue[idx] = 0;
+            q_cnt--;
+            return;
         }
     }
 }
@@ -147,7 +149,7 @@ void sched_tick(registers_t *regs) {
     cur->ticks++;
     if (cur->ticks >= time_slice_for(cur)) {
         cur->ticks = 0;
-        if (n && (n->priority <= cur->priority || cur->ticks == 0))
+        if (n)
             switch_to(n, regs);
     }
 }

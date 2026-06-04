@@ -118,8 +118,9 @@ void vmm_map_page_in(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32
     table->entries[pt_index] = (phys & 0xFFFFF000) | (flags & 0xFFF) | PAGE_PRESENT;
 }
 void vmm_unmap_page(uint32_t virt) {
-    if (!kernel_directory) return;
-    page_table_t* table = vmm_get_page_table(kernel_directory, virt, 0);
+    page_directory_t *dir = current_directory ? current_directory : kernel_directory;
+    if (!dir) return;
+    page_table_t* table = vmm_get_page_table(dir, virt, 0);
     if (!table) return;
     uint32_t pt_index = (virt >> 12) & 0x3FF;
     if (table->entries[pt_index] & PAGE_PRESENT) {
@@ -129,14 +130,15 @@ void vmm_unmap_page(uint32_t virt) {
     }
 }
 uint32_t vmm_get_physical(uint32_t virt) {
-    if (!kernel_directory) return 0;
+    page_directory_t *dir = current_directory ? current_directory : kernel_directory;
+    if (!dir) return 0;
     uint32_t pd_index = virt >> 22;
-    uint32_t pde = kernel_directory->entries[pd_index];
+    uint32_t pde = dir->entries[pd_index];
     if (!(pde & PAGE_PRESENT)) return 0;
     if (pde & 0x80) {
         return (pde & 0xFFC00000) | (virt & 0x3FFFFF);
     }
-    page_table_t* table = vmm_get_page_table(kernel_directory, virt, 0);
+    page_table_t* table = vmm_get_page_table(dir, virt, 0);
     if (!table) return 0;
     uint32_t pt_index = (virt >> 12) & 0x3FF;
     if (!(table->entries[pt_index] & PAGE_PRESENT)) return 0;
