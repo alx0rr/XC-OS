@@ -8,6 +8,8 @@ _start:
     xor  ebp, ebp
     call main
     mov  ebx, eax
-    mov  eax, 0        ; SYS_EXIT
+    mov  eax, 0
     int  0x80
     hlt
+
+section .note.GNU-stack noalloc noexec nowrite progbits

@@ -1,13 +1,13 @@
 #include "libc.h"
 #include <stdarg.h>
-#include <stdint.h>
 
 void putchar(char c) {
-    sys_write(1, &c, 1);
+    volatile char tmp = c;
+    sys_write(1, (const void *)&tmp, 1);
 }
 
 void puts(const char *s) {
-    while (*s) putchar(*s++);
+    sys_write(1, s, strlen(s));
 }
 
 int putstr(const char *s, int fd) {
@@ -54,41 +54,51 @@ void *memcpy(void *d, const void *s, size_t n) {
 
 static void pnum(uint32_t v, int base, int pad, char pc) {
     static const char digs[] = "0123456789abcdef";
-    char buf[32];
+    char buf[34];
     int  i = 0;
     if (v == 0) { buf[i++] = '0'; }
     else while (v) { buf[i++] = digs[v % base]; v /= base; }
     while (i < pad) buf[i++] = pc;
-    while (i--) putchar(buf[i]);
+    char out[34]; int oi = 0;
+    while (i--) out[oi++] = buf[i];
+    sys_write(1, out, oi);
 }
 
 int printf(const char *fmt, ...) {
+    char out[512];
+    int  oi = 0;
     va_list ap;
     va_start(ap, fmt);
-    int cnt = 0;
-    for (const char *p = fmt; *p; p++) {
-        if (*p != '%') { putchar(*p); cnt++; continue; }
+    for (const char *p = fmt; *p && oi < 510; p++) {
+        if (*p != '%') { out[oi++] = *p; continue; }
         p++;
         int pad = 0; char pc = ' ';
         if (*p == '0') { pc = '0'; p++; }
-        while (*p >= '0' && *p <= '9') { pad = pad * 10 + (*p - '0'); p++; }
+        while (*p >= '0' && *p <= '9') { pad = pad*10 + (*p-'0'); p++; }
+        char tmp[34]; int ti = 0;
         switch (*p) {
         case 'd': { int v = va_arg(ap, int);
-                    if (v < 0) { putchar('-'); v = -v; }
-                    pnum((uint32_t)v, 10, pad, pc); break; }
-        case 'u': pnum(va_arg(ap, uint32_t), 10, pad, pc); break;
-        case 'x': pnum(va_arg(ap, uint32_t), 16, pad, pc); break;
-        case 'c': putchar((char)va_arg(ap, int)); break;
-        case 's': { const char *s = va_arg(ap, const char *);
-                    if (!s) s = "(null)";
-                    while (*s) { putchar(*s++); cnt++; } break; }
-        case '%': putchar('%'); break;
-        default:  putchar('%'); putchar(*p); break;
+                    if (v < 0 && oi < 509) { out[oi++] = '-'; v = -v; }
+                    uint32_t u = (uint32_t)v; int i = 0; char b[32];
+                    if (u==0) b[i++]='0'; else while(u){b[i++]="0123456789abcdef"[u%10];u/=10;}
+                    while(i<pad) b[i++]=pc; while(i--&&oi<510) out[oi++]=b[i]; break; }
+        case 'u': { uint32_t u=va_arg(ap,uint32_t); int i=0; char b[32];
+                    if(u==0)b[i++]='0'; else while(u){b[i++]="0123456789"[u%10];u/=10;}
+                    while(i<pad)b[i++]=pc; while(i--&&oi<510)out[oi++]=b[i]; break; }
+        case 'x': { uint32_t u=va_arg(ap,uint32_t); int i=0; char b[32];
+                    if(u==0)b[i++]='0'; else while(u){b[i++]="0123456789abcdef"[u%16];u/=16;}
+                    while(i<pad)b[i++]=pc; while(i--&&oi<510)out[oi++]=b[i]; break; }
+        case 'c': if(oi<510) out[oi++]=(char)va_arg(ap,int); break;
+        case 's': { const char *s=va_arg(ap,const char*); if(!s)s="(null)";
+                    while(*s&&oi<510) out[oi++]=*s++; break; }
+        case '%': if(oi<510) out[oi++]='%'; break;
+        default:  if(oi<509){out[oi++]='%';out[oi++]=*p;} break;
         }
-        cnt++;
+        (void)tmp; (void)ti;
     }
     va_end(ap);
-    return cnt;
+    sys_write(1, out, oi);
+    return oi;
 }
 
 static void *heap_cur = 0;
