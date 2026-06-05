@@ -33,11 +33,19 @@ static uint32_t sys_write(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, u
     (void)a; (void)b;
     if (fd != 1 && fd != 2) return (uint32_t)-1;
     if (!uptr_ok(buf, len)) return (uint32_t)-1;
+    if (len == 0) return 0;
+    char kbuf[512];
+    uint32_t n = len < 511 ? len : 511;
     const char *s = (const char *)buf;
-    for (uint32_t i = 0; i < len; i++) {
-        char tmp[2] = {s[i], 0};
+    for (uint32_t i = 0; i < n; i++) kbuf[i] = s[i];
+    kbuf[n] = 0;
+    proc_t *p = sched_current();
+    if (p && p->vm) vmm_switch_kernel();
+    for (uint32_t i = 0; i < n; i++) {
+        char tmp[2] = {kbuf[i], 0};
         printf("%s", tmp);
     }
+    if (p && p->vm) vmm_switch_space(p->vm);
     return len;
 }
 
