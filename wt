@@ -1,0 +1,2 @@
+python3 extra/xcfs_inject.py build/xcos.img kit/malloc_test.elf /mt.elf --exec
+python3 extra/xcfs_inject.py build/xcos.img kit/hello.elf /hello.elf --exec

@@ -94,7 +94,7 @@ static void switch_to(proc_t *nxt, registers_t *regs) {
     if (cur->vm)
         vmm_switch_space(cur->vm);
     else
-        vmm_flush_tlb();
+        vmm_switch_kernel();
 
     if (cur->ctx.cs == UCODE_SEL && !cur->started) {
         cur->started = 1;

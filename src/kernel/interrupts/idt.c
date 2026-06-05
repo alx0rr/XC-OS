@@ -237,6 +237,8 @@ void isr_handler(registers_t *regs) {
     if (regs->int_no < 32) {
         if (regs->cs == 0x1B) {
             extern void task_exit_by_code(uint32_t);
+            printf("{FG(255,100,0)}[ring3 fault] int=%u eip=0x%x err=0x%x\n",
+                   regs->int_no, regs->eip, regs->err_code);
             task_exit_by_code(128 + regs->int_no);
             return;
         }
