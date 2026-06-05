@@ -1,0 +1,15 @@
+#!/bin/bash
+killall -9 qemu-system-i386 2>/dev/null
+
+DISK="build/xcos.img"
+
+qemu-system-i386 \
+  -m 128 \
+  -device piix3-ide,id=ide \
+  -drive file=$DISK,format=raw,if=none,id=disk0 \
+  -device ide-hd,drive=disk0,bus=ide.0,unit=0 \
+  -vga std \
+  -vnc :0 \
+  -netdev user,id=n0 \
+  -device ne2k_isa,netdev=n0 \
+  -boot c
