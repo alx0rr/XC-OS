@@ -62,13 +62,9 @@ proc_t *elf_load(const char *nm, const uint8_t *img, uint32_t sz) {
             if (ph->p_offset + copy > sz) { proc_free(p); return 0; }
 
             const uint8_t *src = img + ph->p_offset;
-            uint8_t       *dst = (uint8_t *)va;
-
-            page_directory_t *old_dir = 0;
-            vmm_switch_space(p->vm);
 
             for (uint32_t off = 0; off < copy; off++) {
-                uint32_t tv = (uint32_t)(dst + off);
+                uint32_t tv   = va + off;
                 uint32_t pd_i = tv >> 22;
                 uint32_t pt_i = (tv >> 12) & 0x3FF;
                 uint32_t pde  = p->vm->directory->entries[pd_i];
@@ -76,10 +72,9 @@ proc_t *elf_load(const char *nm, const uint8_t *img, uint32_t sz) {
                 page_table_t *pt  = (page_table_t *)(pde & 0xFFFFF000U);
                 uint32_t      pte = pt->entries[pt_i];
                 if (!(pte & PAGE_PRESENT)) continue;
-                uint8_t *phys_base = (uint8_t *)(pte & 0xFFFFF000U);
-                phys_base[tv & 0xFFF] = src[off];
+                uint8_t *phys_page = (uint8_t *)(pte & 0xFFFFF000U);
+                phys_page[tv & 0xFFF] = src[off];
             }
-            (void)old_dir;
         }
     }
 
