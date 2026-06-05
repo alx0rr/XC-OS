@@ -5,6 +5,10 @@
 #include "../../include/interrupts/idt.h"
 #include "../../lib/string.h"
 
+extern void proc_enter_user(uint32_t eip, uint32_t cs,
+                             uint32_t eflags,
+                             uint32_t esp3, uint32_t ss);
+
 #define TIME_SLICE_HIGH   10
 #define TIME_SLICE_NORMAL 20
 #define TIME_SLICE_LOW    40
@@ -91,6 +95,14 @@ static void switch_to(proc_t *nxt, registers_t *regs) {
         vmm_switch_space(cur->vm);
     else
         vmm_flush_tlb();
+
+    if (cur->ctx.cs == UCODE_SEL && !cur->started) {
+        cur->started = 1;
+        proc_enter_user(cur->ctx.eip, UCODE_SEL,
+                        cur->ctx.eflags | 0x200,
+                        cur->ctx.esp, UDATA_SEL);
+        return;
+    }
 
     regs->eip    = cur->ctx.eip;
     regs->eflags = cur->ctx.eflags | 0x200;

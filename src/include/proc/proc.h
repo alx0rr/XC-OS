@@ -57,6 +57,7 @@ typedef struct proc {
 
     struct proc *next;
     proc_fd_t    fds[PROC_FD_MAX];
+    uint8_t      started;
 } proc_t;
 
 proc_t* proc_create_kernel(const char *name, void (*fn)());

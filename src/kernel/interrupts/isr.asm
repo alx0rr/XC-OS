@@ -115,3 +115,19 @@ irq_common_stub:
     add esp, 8
     sti
     iret
+
+global proc_enter_user
+proc_enter_user:
+    cli
+    mov ebp, esp
+    mov eax, [ebp+20]
+    mov ds,  ax
+    mov es,  ax
+    mov fs,  ax
+    mov gs,  ax
+    push dword [ebp+20] ; ss
+    push dword [ebp+16] ; esp3
+    push dword [ebp+12] ; eflags
+    push dword [ebp+8]  ; cs
+    push dword [ebp+4]  ; eip
+    iret
