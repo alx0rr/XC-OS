@@ -6,6 +6,6 @@ void kernel_main(void) {
     startup();
 
     printf("{FG(0,255,0)}Welcome to {FG(194,122,255)}XC-OS {FG(0,255,0)}\n");
-
+    printf("{FG(0,255,0)}Не обращай внимание, это тест кириллицы\n");
     kshell_launch();
 }
