@@ -395,12 +395,28 @@ int xcfs_write(const char* path, uint8_t* buf, uint32_t size) {
     xcfs_entry_t* e = &g_ent[idx];
     if (e->type != XCFS_TYPE_FILE) return -1;
     if (e->flags & XCFS_FLAG_READONLY) return -1;
-    if (size > e->size) return -1;
-    uint32_t nsec = (size + XCFS_SECTOR_SIZE - 1) / XCFS_SECTOR_SIZE;
-    if (nsec == 0) nsec = 1;
+
+    uint32_t old_nsec = (e->size + XCFS_SECTOR_SIZE - 1) / XCFS_SECTOR_SIZE;
+    if (old_nsec == 0) old_nsec = 1;
+    uint32_t new_nsec = (size + XCFS_SECTOR_SIZE - 1) / XCFS_SECTOR_SIZE;
+    if (new_nsec == 0) new_nsec = 1;
+
+    if (new_nsec != old_nsec) {
+        bmp_mark(e->start_sector, old_nsec, 0);
+        uint32_t new_start = bmp_find(new_nsec);
+        if (new_start == INVAL) {
+            bmp_mark(e->start_sector, old_nsec, 1);
+            return -1;
+        }
+        e->start_sector = new_start;
+        bmp_mark(new_start, new_nsec, 1);
+        sv_bmp();
+    }
+
+    e->size = size;
     uint8_t sb[XCFS_SECTOR_SIZE];
     uint32_t done = 0;
-    for (uint32_t s = 0; s < nsec; s++) {
+    for (uint32_t s = 0; s < new_nsec; s++) {
         memset(sb, 0, XCFS_SECTOR_SIZE);
         uint32_t cp = size - done;
         if (cp > XCFS_SECTOR_SIZE) cp = XCFS_SECTOR_SIZE;

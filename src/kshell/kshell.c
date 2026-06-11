@@ -87,7 +87,8 @@ void kshell_launch(void) {
         printf("{FG(194,122,255)}root@xcos{FG(255,255,255)}:{FG(100,200,255)}%s{FG(255,255,255)}$ ",
                xcfs_getcwd());
 
-        char *input = keyboard_input();
+        char input[256];
+        keyboard_input(input, sizeof(input));
         printf("\n");
 
         if (strlen(input) == 0) continue;

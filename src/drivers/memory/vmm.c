@@ -7,6 +7,12 @@ static page_directory_t* kernel_directory = 0;
 static page_directory_t* current_directory = 0;
 static uint32_t total_mapped_pages = 0;
 static uint32_t kernel_page_tables_phys[256];
+
+#define VA_HEAP_START  KERNEL_HEAP_VIRT
+#define VA_HEAP_PAGES  ((0xFF000000u - KERNEL_HEAP_VIRT) / PAGE_SIZE)
+#define VA_BMP_WORDS   ((VA_HEAP_PAGES + 31) / 32)
+static uint32_t va_bitmap[VA_BMP_WORDS];
+static uint8_t  va_bitmap_init = 0;
 static inline void invlpg(uint32_t virt) {
     __asm__ volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
@@ -126,44 +132,58 @@ uint32_t vmm_get_physical(uint32_t virt) {
 }
 void* vmm_alloc_pages(uint32_t count, uint32_t flags) {
     if (count == 0) return 0;
-    static uint32_t next_virt = KERNEL_HEAP_VIRT;
-    uint32_t start_virt = next_virt;
-    uint32_t cr0;
-    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
-    uint8_t paging_enabled = (cr0 & 0x80000000) ? 1 : 0;
-    void* first_phys = 0;
-    for (uint32_t i = 0; i < count; i++) {
-        void* phys = pmm_malloc(PAGE_SIZE);
-        if (!phys) {
-            for (uint32_t j = 0; j < i; j++) {
-                if (paging_enabled) {
-                    uint32_t v = start_virt + (j * PAGE_SIZE);
-                    uint32_t p = vmm_get_physical(v);
-                    vmm_unmap_page(v);
-                    pmm_free((void*)(p & 0xFFFFF000));
-                } else {
-                    uint32_t p = (uint32_t)first_phys + (j * PAGE_SIZE);
-                    pmm_free((void*)p);
+
+    if (!va_bitmap_init) {
+        for (uint32_t i = 0; i < VA_BMP_WORDS; i++) va_bitmap[i] = 0;
+        va_bitmap_init = 1;
+    }
+
+    uint32_t run = 0, start = 0;
+    for (uint32_t i = 0; i < VA_HEAP_PAGES; i++) {
+        if (!(va_bitmap[i >> 5] & (1u << (i & 31)))) {
+            if (run == 0) start = i;
+            if (++run >= count) {
+                uint32_t cr0;
+                __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+                uint8_t paging_enabled = (cr0 & 0x80000000) ? 1 : 0;
+
+                void* first_phys = 0;
+                for (uint32_t k = 0; k < count; k++) {
+                    void* phys = pmm_malloc(PAGE_SIZE);
+                    if (!phys) {
+                        for (uint32_t j = 0; j < k; j++) {
+                            uint32_t vi = start + j;
+                            va_bitmap[vi >> 5] &= ~(1u << (vi & 31));
+                            uint32_t v = VA_HEAP_START + (vi * PAGE_SIZE);
+                            uint32_t p = vmm_get_physical(v);
+                            vmm_unmap_page(v);
+                            pmm_free((void*)(p & 0xFFFFF000));
+                        }
+                        return 0;
+                    }
+                    if (k == 0) first_phys = phys;
+                    uint32_t vi = start + k;
+                    va_bitmap[vi >> 5] |= (1u << (vi & 31));
+                    if (paging_enabled) {
+                        uint32_t v = VA_HEAP_START + (vi * PAGE_SIZE);
+                        vmm_map_page(v, (uint32_t)phys, flags | PAGE_PRESENT | PAGE_WRITE);
+                        memset((void*)v, 0, PAGE_SIZE);
+                    } else {
+                        uint32_t pa = (uint32_t)phys;
+                        vmm_map_page(pa, pa, flags | PAGE_PRESENT | PAGE_WRITE);
+                        memset(phys, 0, PAGE_SIZE);
+                    }
                 }
+                uint32_t cr0_2;
+                __asm__ volatile("mov %%cr0, %0" : "=r"(cr0_2));
+                if (!(cr0_2 & 0x80000000)) return first_phys;
+                return (void*)(VA_HEAP_START + (start * PAGE_SIZE));
             }
-            return 0;
-        }
-        if (i == 0) first_phys = phys;
-        if (paging_enabled) {
-            uint32_t v = start_virt + (i * PAGE_SIZE);
-            vmm_map_page(v, (uint32_t)phys, flags | PAGE_PRESENT | PAGE_WRITE);
-            memset((void*)v, 0, PAGE_SIZE);
         } else {
-            uint32_t phys_addr = (uint32_t)phys;
-            vmm_map_page(phys_addr, phys_addr, flags | PAGE_PRESENT | PAGE_WRITE);
-            memset(phys, 0, PAGE_SIZE);
+            run = 0;
         }
     }
-    next_virt += (count * PAGE_SIZE);
-    if (!paging_enabled) {
-        return first_phys;
-    }
-    return (void*)start_virt;
+    return 0;
 }
 
 void vmm_free_pages(void* virt, uint32_t count) {
@@ -175,6 +195,11 @@ void vmm_free_pages(void* virt, uint32_t count) {
         if (phys) {
             vmm_unmap_page(v);
             pmm_free((void*)(phys & 0xFFFFF000));
+        }
+        if (v >= VA_HEAP_START) {
+            uint32_t vi = (v - VA_HEAP_START) / PAGE_SIZE;
+            if (vi < VA_HEAP_PAGES)
+                va_bitmap[vi >> 5] &= ~(1u << (vi & 31));
         }
     }
 }

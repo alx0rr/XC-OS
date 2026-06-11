@@ -260,29 +260,29 @@ static char keyboard_getchar(void) {
     return c;
 }
 
-char* keyboard_input(void) {
-    static char line_buffer[256];
+void keyboard_input(char* buf, uint32_t size) {
+    if (!buf || size == 0) return;
     uint32_t index = 0;
-    
+
     while (1) {
         char c = keyboard_getchar();
-        
+
         if (c == '\b') {
             if (index > 0) {
                 index--;
-                line_buffer[index] = '\0';
+                buf[index] = '\0';
                 printf("\b \b");
             }
             continue;
         }
-        
+
         if (c == '\n') {
-            line_buffer[index] = '\0';
-            return line_buffer;
+            buf[index] = '\0';
+            return;
         }
-        
-        if (index < sizeof(line_buffer) - 1) {
-            line_buffer[index++] = c;
+
+        if (index < size - 1) {
+            buf[index++] = c;
             printf("%c", c);
         }
     }

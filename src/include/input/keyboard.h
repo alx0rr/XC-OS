@@ -4,6 +4,6 @@
 #include <stdbool.h>
 void keyboard_init(void);
 bool keyboard_key(uint8_t keycode);
-char* keyboard_input(void);
+void keyboard_input(char* buf, uint32_t size);
 #endif
 char keyboard_getchar_raw(void);
