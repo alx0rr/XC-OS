@@ -62,7 +62,7 @@ void startup() {
 
     proc_t *shell = proc_create_kernel("shell", shell_proc_entry);
     if (shell) {
-        shell->priority = PROC_PRIORITY_HIGH;
+        shell->priority = PROC_PRIORITY_NORMAL; //Фууу нормисня
         sched_add(shell);
     }
 }
