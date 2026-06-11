@@ -46,4 +46,6 @@ void idt_init();
 void pic_init();
 void idt_register_exception_handler(uint8_t int_no, void (*handler)(registers_t));
 void idt_register_irq_handler(uint8_t irq_no, void (*handler)(registers_t*));
+void syscall_handler(registers_t *regs);
+void syscall_register(uint8_t n, void (*handler)(registers_t*));
 #endif

@@ -3,6 +3,7 @@
 #include "../include/memory/pmm.h"
 #include "../include/memory/vmm.h"
 #include "../include/cpu/cpu.h"
+#include "../include/cpu/tss.h"
 #include "../include/interrupts/idt.h"
 #include "../include/storage/ata.h"
 #include "../include/fs/xcfs.h"
@@ -11,8 +12,6 @@
 #include "../include/sound/pcspk.h"
 #include "../include/graphics/framebuffer.h"
 #include "../lib/types.h"
-
-#define IP(a,b,c,d) (((u32)(a)<<24)|((u32)(b)<<16)|((u32)(c)<<8)|(d))
 
 void startup() {
     vbe_init();
@@ -30,6 +29,8 @@ void startup() {
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIC initialized\n");
     idt_init();
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} IDT initialized\n");
+    extern uint8_t stack_top[];
+    tss_init((uint32_t)stack_top);
     pit_init(1000);
     printf("{FG(0,255,0)}[OK]{FG(255,255,255)} PIT initialized\n");
     pcspk_init();

@@ -41,11 +41,11 @@ NASM_BIN := -f bin
 LIB_OBJS := $(BUILD)/string.o $(BUILD)/time.o $(BUILD)/random.o
 
 DRV_OBJS := $(BUILD)/vbe.o $(BUILD)/framebuffer.o $(BUILD)/text.o \
-            $(BUILD)/pmm.o $(BUILD)/vmm.o \
+            $(BUILD)/pmm.o $(BUILD)/vmm.o $(BUILD)/tss.o \
             $(BUILD)/keyboard.o $(BUILD)/cpu.o $(BUILD)/ata.o \
             $(BUILD)/pit.o $(BUILD)/pcspk.o $(BUILD)/xcfs.o
 
-KERN_OBJS := $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/idt.o \
+KERN_OBJS := $(BUILD)/boot.o $(BUILD)/gdt_tss.o $(BUILD)/isr.o $(BUILD)/idt.o \
              $(BUILD)/editor.o $(BUILD)/kernel.o
 
 KSHELL_OBJS := $(BUILD)/kshell.o $(BUILD)/kshell_cmd.o
@@ -88,6 +88,8 @@ build: $(CFG)
 	@$(call step,"Assembling IDT/ISR...")
 	@nasm $(NASM_ELF) $(KERNEL)/interrupts/isr.asm -o $(BUILD)/isr.o \
 	 || { echo -e "$(RED)✗$(RESET) Failed: isr.asm" >&2; exit 1; }
+	@nasm $(NASM_ELF) $(KERNEL)/gdt_tss.asm -o $(BUILD)/gdt_tss.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: gdt_tss.asm" >&2; exit 1; }
 
 	@$(call step,"Compiling libs...")
 	@gcc $(CFLAGS) -c $(LIB)/string.c  -o $(BUILD)/string.o  || { echo -e "$(RED)✗$(RESET) Failed: string.c"  >&2; exit 1; }
@@ -100,6 +102,7 @@ build: $(CFG)
 	@gcc $(CFLAGS) -c $(DRIVERS)/text/text.c            -o $(BUILD)/text.o        || { echo -e "$(RED)✗$(RESET) Failed: text.c"        >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/memory/pmm.c           -o $(BUILD)/pmm.o         || { echo -e "$(RED)✗$(RESET) Failed: pmm.c"         >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/memory/vmm.c           -o $(BUILD)/vmm.o         || { echo -e "$(RED)✗$(RESET) Failed: vmm.c"         >&2; exit 1; }
+	@gcc $(CFLAGS) -c $(DRIVERS)/cpu/tss.c              -o $(BUILD)/tss.o         || { echo -e "$(RED)✗$(RESET) Failed: tss.c"         >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/input/keyboard.c       -o $(BUILD)/keyboard.o    || { echo -e "$(RED)✗$(RESET) Failed: keyboard.c"    >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/cpu/cpu.c              -o $(BUILD)/cpu.o         || { echo -e "$(RED)✗$(RESET) Failed: cpu.c"         >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/storage/ata.c          -o $(BUILD)/ata.o         || { echo -e "$(RED)✗$(RESET) Failed: ata.c"         >&2; exit 1; }
@@ -123,6 +126,7 @@ build: $(CFG)
 	@ld -m elf_i386 -T $(SRC)/linker.ld -o $(BUILD)/kernel.bin \
 	    --start-group \
 	    $(BUILD)/boot.o       $(BUILD)/kernel.o      $(BUILD)/idt.o      $(BUILD)/isr.o  \
+	    $(BUILD)/gdt_tss.o   $(BUILD)/tss.o                                             \
 	    $(BUILD)/vbe.o        $(BUILD)/framebuffer.o $(BUILD)/text.o                     \
 	    $(BUILD)/pmm.o        $(BUILD)/vmm.o                                             \
 	    $(BUILD)/string.o     $(BUILD)/time.o        $(BUILD)/random.o                   \

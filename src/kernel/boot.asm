@@ -2,6 +2,7 @@
 [extern kernel_main]
 [global _start]
 [global vbe_mode_info_data]
+[global stack_top]
 section .bss
 align 16
 stack_bottom:

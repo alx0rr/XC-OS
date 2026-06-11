@@ -53,8 +53,10 @@ extern void irq12();
 extern void irq13();
 extern void irq14();
 extern void irq15();
-typedef void (*irq_handler_t)(registers_t*); 
+extern void isr_syscall();
+typedef void (*irq_handler_t)(registers_t*);
 static irq_handler_t irq_handlers[16] = {0};
+static void (*syscall_table[256])(registers_t*) = {0};
 static void idt_set_gate(uint8_t n, uint32_t handler, uint16_t sel, uint8_t flags) {
     idt[n].offset_low = handler & 0xFFFF;
     idt[n].offset_high = (handler >> 16) & 0xFFFF;
@@ -134,6 +136,7 @@ void idt_init() {
     idt_set_gate(45, (uint32_t)irq13, 0x08, 0x8E);
     idt_set_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
+    idt_set_gate(0x80, (uint32_t)isr_syscall, 0x08, 0xEE);
     asm volatile("lidt %0" : : "m"(idt_ptr));
     asm volatile("sti");
 }
@@ -236,4 +239,17 @@ void isr_handler(registers_t *regs) {
         }
         outb(0x20, 0x20);
     }
+}
+
+void syscall_handler(registers_t *regs) {
+    uint32_t n = regs->eax;
+    if (n < 256 && syscall_table[n]) {
+        syscall_table[n](regs);
+    } else {
+        regs->eax = (uint32_t)-1;
+    }
+}
+
+void syscall_register(uint8_t n, void (*handler)(registers_t*)) {
+    syscall_table[n] = handler;
 }
