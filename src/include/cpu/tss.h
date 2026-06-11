@@ -45,4 +45,6 @@ typedef struct {
 void tss_init(uint32_t kernel_stack_top);
 void tss_set_kernel_stack(uint32_t esp0);
 
+extern uint8_t stack_top[];
+
 #endif

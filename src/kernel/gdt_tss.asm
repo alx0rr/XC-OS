@@ -24,8 +24,8 @@ extern syscall_handler
 global isr_syscall
 isr_syscall:
     cli
-    push byte 0
-    push byte 0x80
+    push dword 0
+    push dword 0x80
     pusha
     mov ax, ds
     push eax
