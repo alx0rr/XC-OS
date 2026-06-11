@@ -1,3 +1,6 @@
+/* 1 February 2026 */
+/* /ᐠ - ˕ -マ forker-25 and alx0rr presents */
+/* XC-OS CMD's */
 #include "../include/text.h"
 #include "../include/input/keyboard.h"
 #include "../include/fs/xcfs.h"
@@ -197,6 +200,8 @@ void cmd_stat(int argc, char** argv) {
     printf("{FG(0,255,0)}Status: Not implemented yet\n");
 }
 
+
+
 static void tree_walk(const char* path, int depth) {
     xcfs_dirent_t entries[32];
     int count = xcfs_readdir(path, entries, 32);
@@ -315,7 +320,7 @@ void cmd_memtest(void) {
     const uint32_t test_sizes[] = {4096, 8192, 16384, 32768, 65536};
     const uint32_t num_tests    = 5;
 
-    void* allocated[100] = {0};
+    void*    allocated[100] = {0};
     uint32_t alloc_count    = 0;
 
     printf("{FG(0,255,0)}Phase 1: Allocation test\n");
@@ -497,6 +502,8 @@ void cmd_sleep(int argc, char** argv) {
     printf("{FG(0,255,0)}Done!\n");
 }
 
+// Fuck tcp&udp & x86 creators.
+
 void cmd_countdown(int argc, char** argv) {
     if (argc < 1) {
         printf("{FG(255,0,0)}Usage: countdown <seconds>\n");
@@ -621,6 +628,7 @@ void cmd_rsof(void) {
     volatile uint32_t x = *p;
     (void)x;
 }
+//Fuck the x86 creator's!
 
 void poweroff() {
     outw(0x604, 0x2000);
@@ -706,10 +714,6 @@ void cmd_ring3test(void) {
     p->priority = PROC_PRIORITY_NORMAL;
     sched_add(p);
     printf("{FG(0,255,0)}PID %u queued. Output will appear on next tick.\n", p->pid);
-    
-    while (proc_get(p->pid) != 0) {
-        task_yield();
-    }
 }
 
 void cmd_exec(int argc, char **argv) {
@@ -748,9 +752,4 @@ void cmd_exec(int argc, char **argv) {
     p->priority = PROC_PRIORITY_NORMAL;
     sched_add(p);
     printf("{FG(0,255,0)}exec: PID %u started\n", p->pid);
-    
-    while (proc_get(p->pid) != 0) {
-        task_yield();
-    }
 }
-
