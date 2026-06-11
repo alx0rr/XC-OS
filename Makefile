@@ -1,7 +1,7 @@
 .PHONY: clean build qemu help push push-release fetch git-list rollback
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-BRANCH ?= main
+BRANCH ?= rft
 MSG    ?=
 TARGET ?=
 
@@ -21,6 +21,7 @@ BUILD   := build
 SRC     := src
 BOOT    := $(SRC)/boot
 KERNEL  := $(SRC)/kernel
+KSHELL  := $(SRC)/kshell
 DRIVERS := $(SRC)/drivers
 INC     := $(SRC)/include
 LIB     := $(SRC)/lib
@@ -45,9 +46,11 @@ DRV_OBJS := $(BUILD)/vbe.o $(BUILD)/framebuffer.o $(BUILD)/text.o \
             $(BUILD)/pit.o $(BUILD)/pcspk.o $(BUILD)/xcfs.o
 
 KERN_OBJS := $(BUILD)/boot.o $(BUILD)/isr.o $(BUILD)/idt.o \
-             $(BUILD)/editor.o $(BUILD)/shell.o $(BUILD)/kernel.o
+             $(BUILD)/editor.o $(BUILD)/kernel.o
 
-ALL_OBJS  := $(KERN_OBJS) $(DRV_OBJS) $(LIB_OBJS)
+KSHELL_OBJS := $(BUILD)/kshell.o $(BUILD)/kshell_cmd.o
+
+ALL_OBJS  := $(KERN_OBJS) $(KSHELL_OBJS) $(DRV_OBJS) $(LIB_OBJS)
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -102,7 +105,7 @@ build: $(CFG)
 	@gcc $(CFLAGS) -c $(DRIVERS)/storage/ata.c          -o $(BUILD)/ata.o         || { echo -e "$(RED)✗$(RESET) Failed: ata.c"         >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/timer/pit.c            -o $(BUILD)/pit.o         || { echo -e "$(RED)✗$(RESET) Failed: pit.c"         >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(DRIVERS)/sound/pcspk.c          -o $(BUILD)/pcspk.o       || { echo -e "$(RED)✗$(RESET) Failed: pcspk.c"       >&2; exit 1; }
-	@gcc $(CFLAGS) -c $(DRIVERS)/fs/xcfs.c              -o $(BUILD)/xcfs.o        || { echo -e "$(RED)✗$(RESET) Failed: xcfs.c"        >&2; exit 1; } 
+	@gcc $(CFLAGS) -c $(DRIVERS)/fs/xcfs.c              -o $(BUILD)/xcfs.o        || { echo -e "$(RED)✗$(RESET) Failed: xcfs.c"        >&2; exit 1; }
 
 	@$(call step,"Compiling IDT...")
 	@gcc $(CFLAGS) -c $(KERNEL)/interrupts/idt.c -o $(BUILD)/idt.o \
@@ -110,8 +113,11 @@ build: $(CFG)
 
 	@$(call step,"Compiling kernel...")
 	@gcc $(CFLAGS) -c $(KERNEL)/editor.c  -o $(BUILD)/editor.o  || { echo -e "$(RED)✗$(RESET) Failed: editor.c"  >&2; exit 1; }
-	@gcc $(CFLAGS) -c $(KERNEL)/shell.c   -o $(BUILD)/shell.o   || { echo -e "$(RED)✗$(RESET) Failed: shell.c"   >&2; exit 1; }
 	@gcc $(CFLAGS) -c $(KERNEL)/kernel.c  -o $(BUILD)/kernel.o  || { echo -e "$(RED)✗$(RESET) Failed: kernel.c"  >&2; exit 1; }
+
+	@$(call step,"Compiling kshell...")
+	@gcc $(CFLAGS) -c $(KSHELL)/kshell_cmd.c -o $(BUILD)/kshell_cmd.o || { echo -e "$(RED)✗$(RESET) Failed: kshell_cmd.c" >&2; exit 1; }
+	@gcc $(CFLAGS) -c $(KSHELL)/kshell.c     -o $(BUILD)/kshell.o     || { echo -e "$(RED)✗$(RESET) Failed: kshell.c"     >&2; exit 1; }
 
 	@$(call step,"Linking kernel...")
 	@ld -m elf_i386 -T $(SRC)/linker.ld -o $(BUILD)/kernel.bin \
@@ -121,8 +127,8 @@ build: $(CFG)
 	    $(BUILD)/pmm.o        $(BUILD)/vmm.o                                             \
 	    $(BUILD)/string.o     $(BUILD)/time.o        $(BUILD)/random.o                   \
 	    $(BUILD)/keyboard.o   $(BUILD)/cpu.o         $(BUILD)/ata.o                      \
-	    $(BUILD)/xcfs.o       $(BUILD)/pit.o         $(BUILD)/pcspk.o \
-	    $(BUILD)/editor.o     $(BUILD)/shell.o                                           \
+	    $(BUILD)/xcfs.o       $(BUILD)/pit.o         $(BUILD)/pcspk.o                    \
+	    $(BUILD)/editor.o     $(BUILD)/kshell_cmd.o  $(BUILD)/kshell.o                   \
 	    --end-group \
 	 || { echo -e "$(RED)✗$(RESET) Linking failed" >&2; exit 1; }
 
