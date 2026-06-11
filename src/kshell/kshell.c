@@ -46,6 +46,7 @@ extern void kshell_cmd_pitbench(void);
 extern void kshell_cmd_banner(int, char**);
 extern void kshell_cmd_beep(int, char**);
 extern void kshell_cmd_hb(void);
+extern void kshell_cmd_r3test(void);
 extern void poweroff(void);
 extern volatile uint8_t ctrl_pressed;
 
@@ -132,6 +133,7 @@ void kshell_launch(void) {
         else if (strcmp(cmd, "banner")    == 0) kshell_cmd_banner(argc, args);
         else if (strcmp(cmd, "beep")      == 0) kshell_cmd_beep(argc, args);
         else if (strcmp(cmd, "hb")        == 0) kshell_cmd_hb();
+        else if (strcmp(cmd, "r3test")    == 0) kshell_cmd_r3test();
         else if (strcmp(cmd, "poweroff")  == 0) poweroff();
         else if (strcmp(cmd, "reboot")    == 0) {
             printf("{FG(255,255,0)}Rebooting...\n");

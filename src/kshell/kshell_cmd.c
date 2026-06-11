@@ -11,6 +11,7 @@
 #include "../include/graphics/framebuffer.h"
 #include "../include/timer/pit.h"
 #include "../include/sound/pcspk.h"
+#include "../include/ring3.h"
 #include "../lib/string.h"
 #include "../lib/time.h"
 #include "../lib/io.h"
@@ -581,4 +582,8 @@ void kshell_cmd_help(void) {
     printf("  {FG(255,255,0)}banner{FG(255,255,255)} <t> - Display banner\n");
     printf("  {FG(255,255,0)}beep{FG(255,255,255)} <f> <d> - Play beep (freq, duration)\n");
     printf("  {FG(255,255,0)}hb{FG(255,255,255)}        - Play Happy Birthday\n\n");
+}
+
+void kshell_cmd_r3test(void) {
+    ring3_run_test();
 }

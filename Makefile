@@ -45,8 +45,8 @@ DRV_OBJS := $(BUILD)/vbe.o $(BUILD)/framebuffer.o $(BUILD)/text.o \
             $(BUILD)/keyboard.o $(BUILD)/cpu.o $(BUILD)/ata.o \
             $(BUILD)/pit.o $(BUILD)/pcspk.o $(BUILD)/xcfs.o
 
-KERN_OBJS := $(BUILD)/boot.o $(BUILD)/gdt_tss.o $(BUILD)/isr.o $(BUILD)/idt.o \
-             $(BUILD)/editor.o $(BUILD)/kernel.o
+KERN_OBJS := $(BUILD)/boot.o $(BUILD)/gdt_tss.o $(BUILD)/ring3.o $(BUILD)/isr.o $(BUILD)/idt.o \
+             $(BUILD)/editor.o $(BUILD)/ring3c.o $(BUILD)/kernel.o
 
 KSHELL_OBJS := $(BUILD)/kshell.o $(BUILD)/kshell_cmd.o
 
@@ -90,6 +90,10 @@ build: $(CFG)
 	 || { echo -e "$(RED)✗$(RESET) Failed: isr.asm" >&2; exit 1; }
 	@nasm $(NASM_ELF) $(KERNEL)/gdt_tss.asm -o $(BUILD)/gdt_tss.o \
 	 || { echo -e "$(RED)✗$(RESET) Failed: gdt_tss.asm" >&2; exit 1; }
+	@nasm $(NASM_ELF) $(KERNEL)/ring3.asm -o $(BUILD)/ring3.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: ring3.asm" >&2; exit 1; }
+	@gcc $(CFLAGS) -c $(KERNEL)/ring3.c -o $(BUILD)/ring3c.o \
+	 || { echo -e "$(RED)✗$(RESET) Failed: ring3.c" >&2; exit 1; }
 
 	@$(call step,"Compiling libs...")
 	@gcc $(CFLAGS) -c $(LIB)/string.c  -o $(BUILD)/string.o  || { echo -e "$(RED)✗$(RESET) Failed: string.c"  >&2; exit 1; }
@@ -126,7 +130,7 @@ build: $(CFG)
 	@ld -m elf_i386 -T $(SRC)/linker.ld -o $(BUILD)/kernel.bin \
 	    --start-group \
 	    $(BUILD)/boot.o       $(BUILD)/kernel.o      $(BUILD)/idt.o      $(BUILD)/isr.o  \
-	    $(BUILD)/gdt_tss.o   $(BUILD)/tss.o                                             \
+	    $(BUILD)/gdt_tss.o   $(BUILD)/tss.o         $(BUILD)/ring3.o    $(BUILD)/ring3c.o \
 	    $(BUILD)/vbe.o        $(BUILD)/framebuffer.o $(BUILD)/text.o                     \
 	    $(BUILD)/pmm.o        $(BUILD)/vmm.o                                             \
 	    $(BUILD)/string.o     $(BUILD)/time.o        $(BUILD)/random.o                   \
