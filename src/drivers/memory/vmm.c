@@ -240,6 +240,9 @@ void vmm_destroy_space(vm_space_t* space) {
 }
 void vmm_switch_space(vm_space_t* space) {
     if (!space || !space->directory) return;
+    for (uint32_t i = 768; i < 1024; i++) {
+        space->directory->entries[i] = kernel_directory->entries[i];
+    }
     current_directory = space->directory;
     load_page_directory((uint32_t)space->directory);
 }
