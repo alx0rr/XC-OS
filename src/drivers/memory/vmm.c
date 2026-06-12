@@ -270,3 +270,94 @@ uint8_t vmm_is_mapped(uint32_t virt) {
     uint32_t pt_index = (virt >> 12) & 0x3FF;
     return (table->entries[pt_index] & PAGE_PRESENT) ? 1 : 0;
 }
+
+void vmm_map_page_in(vm_space_t* space, uint32_t virt, uint32_t phys, uint32_t flags) {
+    if (!space || !space->directory) return;
+    page_directory_t* dir = space->directory;
+    uint32_t pd_index = virt >> 22;
+    uint32_t pde = dir->entries[pd_index];
+
+    page_table_t* table;
+    if (!(pde & PAGE_PRESENT)) {
+        table = (page_table_t*)pmm_malloc(PAGE_SIZE);
+        if (!table) return;
+        memset(table, 0, PAGE_SIZE);
+        dir->entries[pd_index] = ((uint32_t)table & 0xFFFFF000)
+                                 | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+    } else {
+        table = (page_table_t*)(pde & 0xFFFFF000);
+    }
+
+    uint32_t pt_index = (virt >> 12) & 0x3FF;
+    table->entries[pt_index] = (phys & 0xFFFFF000)
+                               | (flags & 0xFFF) | PAGE_PRESENT;
+}
+
+void* vmm_alloc_pages_in_space(vm_space_t* space, uint32_t count) {
+    if (!space || count == 0) return 0;
+
+    uint32_t total = (space->virt_end - space->virt_start) / PAGE_SIZE;
+    uint32_t run = 0, start = 0;
+    uint8_t found = 0;
+
+    for (uint32_t i = 0; i < total; i++) {
+        uint32_t v = space->virt_start + i * PAGE_SIZE;
+        uint32_t pd_index = v >> 22;
+        uint32_t pt_index = (v >> 12) & 0x3FF;
+        uint32_t pde = space->directory->entries[pd_index];
+        uint8_t used = 0;
+        if (pde & PAGE_PRESENT) {
+            page_table_t* table = (page_table_t*)(pde & 0xFFFFF000);
+            used = (table->entries[pt_index] & PAGE_PRESENT) ? 1 : 0;
+        }
+        if (!used) {
+            if (run == 0) start = i;
+            if (++run >= count) { found = 1; break; }
+        } else {
+            run = 0;
+        }
+    }
+
+    if (!found) return 0;
+
+    for (uint32_t k = 0; k < count; k++) {
+        void* phys = pmm_malloc(PAGE_SIZE);
+        if (!phys) {
+            for (uint32_t j = 0; j < k; j++) {
+                uint32_t v = space->virt_start + (start + j) * PAGE_SIZE;
+                uint32_t pd_index = v >> 22;
+                uint32_t pt_index = (v >> 12) & 0x3FF;
+                uint32_t pde = space->directory->entries[pd_index];
+                if (pde & PAGE_PRESENT) {
+                    page_table_t* table = (page_table_t*)(pde & 0xFFFFF000);
+                    uint32_t p = table->entries[pt_index] & 0xFFFFF000;
+                    table->entries[pt_index] = 0;
+                    pmm_free((void*)p);
+                }
+            }
+            return 0;
+        }
+        memset(phys, 0, PAGE_SIZE);
+        uint32_t v = space->virt_start + (start + k) * PAGE_SIZE;
+        vmm_map_page_in(space, v, (uint32_t)phys, space->flags);
+    }
+
+    return (void*)(space->virt_start + start * PAGE_SIZE);
+}
+
+void vmm_free_pages_in_space(vm_space_t* space, void* virt, uint32_t count) {
+    if (!space || !virt || count == 0) return;
+    uint32_t virt_addr = (uint32_t)virt;
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t v = virt_addr + i * PAGE_SIZE;
+        uint32_t pd_index = v >> 22;
+        uint32_t pt_index = (v >> 12) & 0x3FF;
+        uint32_t pde = space->directory->entries[pd_index];
+        if (!(pde & PAGE_PRESENT)) continue;
+        page_table_t* table = (page_table_t*)(pde & 0xFFFFF000);
+        if (!(table->entries[pt_index] & PAGE_PRESENT)) continue;
+        uint32_t phys = table->entries[pt_index] & 0xFFFFF000;
+        table->entries[pt_index] = 0;
+        pmm_free((void*)phys);
+    }
+}

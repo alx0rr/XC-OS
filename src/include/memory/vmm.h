@@ -36,4 +36,7 @@ void vmm_print_stats();
 void vmm_flush_tlb();
 void vmm_flush_page(uint32_t virt);
 uint8_t vmm_is_mapped(uint32_t virt);
+void vmm_map_page_in(vm_space_t* space, uint32_t virt, uint32_t phys, uint32_t flags);
+void* vmm_alloc_pages_in_space(vm_space_t* space, uint32_t count);
+void vmm_free_pages_in_space(vm_space_t* space, void* virt, uint32_t count);
 #endif
