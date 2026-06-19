@@ -27,6 +27,5 @@ r3test_code:
     mov eax, 1
     int 0x80
 .loop:
-    nop
     jmp .loop
 r3test_code_end:

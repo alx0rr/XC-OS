@@ -13,6 +13,13 @@ static uint32_t kernel_page_tables_phys[256];
 #define VA_BMP_WORDS   ((VA_HEAP_PAGES + 31) / 32)
 static uint32_t va_bitmap[VA_BMP_WORDS];
 static uint8_t  va_bitmap_init = 0;
+static void vmm_kmap(vm_space_t* s) {
+    if (!s || !s->directory || !kernel_directory) return;
+    s->directory->entries[0] = kernel_directory->entries[0];
+    for (uint32_t i = 768; i < 1024; i++) {
+        s->directory->entries[i] = kernel_directory->entries[i];
+    }
+}
 static inline void invlpg(uint32_t virt) {
     __asm__ volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
@@ -212,9 +219,7 @@ vm_space_t* vmm_create_space() {
         return 0;
     }
     memset(space->directory, 0, PAGE_SIZE);
-    for (uint32_t i = 768; i < 1024; i++) {
-        space->directory->entries[i] = kernel_directory->entries[i];
-    }
+    vmm_kmap(space);
     space->virt_start = USER_HEAP_VIRT;
     space->virt_end = KERNEL_HEAP_VIRT;
     space->flags = PAGE_USER | PAGE_WRITE;
@@ -224,6 +229,7 @@ void vmm_destroy_space(vm_space_t* space) {
     if (!space) return;
     for (uint32_t i = 0; i < 768; i++) {
         if (space->directory->entries[i] & PAGE_PRESENT) {
+            if (space->directory->entries[i] & 0x80) continue;
             uint32_t table_phys = space->directory->entries[i] & 0xFFFFF000;
             page_table_t* table = (page_table_t*)table_phys;
             for (uint32_t j = 0; j < 1024; j++) {
@@ -240,9 +246,7 @@ void vmm_destroy_space(vm_space_t* space) {
 }
 void vmm_switch_space(vm_space_t* space) {
     if (!space || !space->directory) return;
-    for (uint32_t i = 768; i < 1024; i++) {
-        space->directory->entries[i] = kernel_directory->entries[i];
-    }
+    vmm_kmap(space);
     current_directory = space->directory;
     load_page_directory((uint32_t)space->directory);
 }
