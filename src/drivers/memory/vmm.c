@@ -15,7 +15,9 @@ static uint32_t va_bitmap[VA_BMP_WORDS];
 static uint8_t  va_bitmap_init = 0;
 static void vmm_kmap(vm_space_t* s) {
     if (!s || !s->directory || !kernel_directory) return;
-    s->directory->entries[0] = kernel_directory->entries[0];
+    for (uint32_t i = 0; i < 224; i++) {
+        s->directory->entries[i] = kernel_directory->entries[i];
+    }
     for (uint32_t i = 768; i < 1024; i++) {
         s->directory->entries[i] = kernel_directory->entries[i];
     }
@@ -249,6 +251,10 @@ void vmm_switch_space(vm_space_t* space) {
     vmm_kmap(space);
     current_directory = space->directory;
     load_page_directory((uint32_t)space->directory);
+}
+void vmm_switch_kernel() {
+    current_directory = kernel_directory;
+    load_page_directory((uint32_t)kernel_directory);
 }
 void vmm_print_stats() {
     printf("VMM Stats:\n");

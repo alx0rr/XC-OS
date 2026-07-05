@@ -10,10 +10,30 @@ extern uint8_t r3test_code[];
 extern uint8_t r3test_code_end[];
 
 static vm_space_t* user_space = 0;
+static uint32_t k_esp = 0;
+static uint32_t k_ebp = 0;
+static void* k_eip = 0;
 
 static void syscall_r3test(registers_t *regs) {
     printf("{FG(0,255,0)}[Ring3]{FG(255,255,255)} syscall eax=%u cs=0x%x (CPL=%u)\n",
            regs->eax, regs->cs, regs->cs & 3);
+}
+
+static void syscall_r3exit(registers_t *regs) {
+    (void)regs;
+    vmm_switch_kernel();
+    uint32_t esp = k_esp;
+    uint32_t ebp = k_ebp;
+    void* eip = k_eip;
+    asm volatile(
+        "sti\n"
+        "mov %0, %%esp\n"
+        "mov %1, %%ebp\n"
+        "jmp *%2\n"
+        :
+        : "r"(esp), "r"(ebp), "r"(eip)
+        : "memory"
+    );
 }
 
 static uint32_t get_phys_from_space(vm_space_t* space, uint32_t virt) {
@@ -28,6 +48,7 @@ static uint32_t get_phys_from_space(vm_space_t* space, uint32_t virt) {
 
 void ring3_run_test(void) {
     syscall_register(1, syscall_r3test);
+    syscall_register(2, syscall_r3exit);
 
     void* kstack = vmm_alloc_pages(1, 0);
     if (!kstack) {
@@ -74,6 +95,19 @@ void ring3_run_test(void) {
            code_virt, stack_virt, kstack_top);
     printf("{FG(255,255,0)}[Ring3]{FG(255,255,255)} entering CPL=3...\n");
 
+    asm volatile(
+        "mov %%esp, %0\n"
+        "mov %%ebp, %1\n"
+        : "=r"(k_esp), "=r"(k_ebp)
+    );
+    k_eip = &&resume;
+
     vmm_switch_space(user_space);
     ring3_enter(code_virt, stack_virt);
+
+resume:
+    printf("{FG(0,255,0)}[Ring3]{FG(255,255,255)} returned to kernel\n");
+    vmm_destroy_space(user_space);
+    vmm_free_pages(kstack, 1);
+    user_space = 0;
 }

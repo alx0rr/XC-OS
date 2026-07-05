@@ -26,6 +26,8 @@ global r3test_code_end
 r3test_code:
     mov eax, 1
     int 0x80
+    mov eax, 2
+    int 0x80
 .loop:
     jmp .loop
 r3test_code_end:
