@@ -34,6 +34,10 @@ CFLAGS := -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protect
           -fomit-frame-pointer -fno-exceptions \
           -I$(INC)
 
+CFLAGS_R3 := -m32 -ffreestanding -fno-pie -nostdlib -fno-builtin -fno-stack-protector \
+          -O0 -march=i686 -mtune=generic -fno-exceptions \
+          -I$(INC)
+
 NASM_ELF := -f elf32
 NASM_BIN := -f bin
 
@@ -92,7 +96,7 @@ build: $(CFG)
 	 || { echo -e "$(RED)✗$(RESET) Failed: gdt_tss.asm" >&2; exit 1; }
 	@nasm $(NASM_ELF) $(KERNEL)/ring3.asm -o $(BUILD)/ring3.o \
 	 || { echo -e "$(RED)✗$(RESET) Failed: ring3.asm" >&2; exit 1; }
-	@gcc $(CFLAGS) -c $(KERNEL)/ring3.c -o $(BUILD)/ring3c.o \
+	@gcc $(CFLAGS_R3) -c $(KERNEL)/ring3.c -o $(BUILD)/ring3c.o \
 	 || { echo -e "$(RED)✗$(RESET) Failed: ring3.c" >&2; exit 1; }
 
 	@$(call step,"Compiling libs...")
